@@ -37,7 +37,7 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
 
       // Hardcoded credentials as per original file
       const adminUsername = 'csecitchennai_researchfaculty45';
-      const adminPassword = 'citchennai@CSE@151006';
+      const adminPassword = 'citchennai@CSE0151006';
 
       await Future.delayed(const Duration(seconds: 1)); // Mock delay
 
