@@ -98,16 +98,6 @@ class LoginSelectionScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: AppConstants.paddingMedium),
 
-                  // Student Login Button
-                  _buildLoginButton(
-                    context: context,
-                    label: 'Student Login',
-                    icon: Icons.school_outlined,
-                    color: Colors.orange,
-                    onTap: () {
-                      _showComingSoonDialog(context, 'Student');
-                    },
-                  ),
 
                   const SizedBox(height: AppConstants.paddingXLarge),
 
