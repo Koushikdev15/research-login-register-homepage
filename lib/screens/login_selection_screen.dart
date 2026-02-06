@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../utils/constants.dart';
 import 'faculty/faculty_login_screen.dart';
+import 'admin/admin_login_screen.dart';
 
 class LoginSelectionScreen extends StatelessWidget {
   const LoginSelectionScreen({super.key});
@@ -76,7 +77,12 @@ class LoginSelectionScreen extends StatelessWidget {
                     icon: Icons.admin_panel_settings_rounded,
                     color: Colors.deepPurple,
                     onTap: () {
-                      _showComingSoonDialog(context, 'Admin');
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const AdminLoginScreen(),
+                        ),
+                      );
                     },
                   ),
                   const SizedBox(height: AppConstants.paddingMedium),
