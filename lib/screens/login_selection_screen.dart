@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import '../utils/constants.dart';
+import '../theme/app_colors.dart';
+import '../theme/app_text_styles.dart';
 import 'faculty/faculty_login_screen.dart';
 import 'admin/admin_login_screen.dart';
 
@@ -8,209 +9,183 @@ class LoginSelectionScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Using a Scaffold with a subtle off-white background
     return Scaffold(
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              AppConstants.primaryColor,
-              AppConstants.accentColor,
-            ],
-          ),
-        ),
-        child: SafeArea(
-          child: Center(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(AppConstants.paddingLarge),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  // App Logo/Icon
-                  Container(
-                    padding: const EdgeInsets.all(AppConstants.paddingXLarge),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.1),
-                          blurRadius: 20,
-                          spreadRadius: 5,
+      backgroundColor: AppColors.offWhite,
+      body: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24.0),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 480),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Main Card
+                Card(
+                  elevation: 4,
+                  shadowColor: Colors.black.withOpacity(0.1),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    side: const BorderSide(color: AppColors.cardBorder),
+                  ),
+                  color: AppColors.pureWhite,
+                  child: Padding(
+                    padding: const EdgeInsets.all(40.0),
+                    child: Column(
+                      children: [
+                        // Header Section
+                        const Icon(
+                          Icons.account_balance, 
+                          size: 64, 
+                          color: AppColors.universityNavy
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'UNIVERSITY DEPARTMENT',
+                          style: AppTextStyles.label.copyWith(
+                            color: AppColors.mediumGray, 
+                            letterSpacing: 2.0
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 8),
+                        const Divider(height: 32, indent: 40, endIndent: 40),
+                        
+                        Text(
+                          'Research CSE',
+                          style: AppTextStyles.h2.copyWith(
+                            color: AppColors.universityNavy,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Faculty Management System',
+                          style: AppTextStyles.bodyLarge.copyWith(
+                            color: AppColors.mediumGray,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 48),
+
+                        // Login Options
+                        // Admin Login
+                        SizedBox(
+                          width: double.infinity,
+                          height: 56,
+                          child: ElevatedButton.icon(
+                            icon: const Icon(Icons.security, size: 24),
+                            label: const Text('Administrator Login'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.universityNavy,
+                              foregroundColor: AppColors.pureWhite,
+                              textStyle: AppTextStyles.h5,
+                              elevation: 2,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                            ),
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => const AdminLoginScreen(),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+
+                        // Faculty Login
+                        SizedBox(
+                          width: double.infinity,
+                          height: 56,
+                          child: OutlinedButton.icon(
+                            icon: const Icon(Icons.person_outline, size: 24),
+                            label: const Text('Faculty Login'),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: AppColors.academicBlue,
+                              side: const BorderSide(color: AppColors.academicBlue, width: 2),
+                              textStyle: AppTextStyles.h5,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                            ),
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => const FacultyLoginScreen(),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+
+                        // Student Login (Disabled)
+                        SizedBox(
+                          width: double.infinity,
+                          height: 56,
+                          child: OutlinedButton.icon(
+                            icon: const Icon(Icons.school_outlined, size: 24),
+                            label: const Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text('Student Login'),
+                                SizedBox(width: 8),
+                                Chip(
+                                  label: Text('Coming Soon'),
+                                  labelStyle: TextStyle(fontSize: 10, color: AppColors.mediumGray),
+                                  backgroundColor: AppColors.lightGray,
+                                  padding: EdgeInsets.zero,
+                                  visualDensity: VisualDensity.compact,
+                                )
+                              ],
+                            ),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: AppColors.mediumGray,
+                              side: const BorderSide(color: AppColors.inputBorder),
+                              textStyle: AppTextStyles.h5,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              // Disabling interaction style manually without disabling the button functionality 
+                              // unless we want it truly disabled. 
+                              // User spec says "Disabled State", so let's disable it.
+                            ),
+                            onPressed: null, 
+                          ),
                         ),
                       ],
                     ),
-                    child: Icon(
-                      Icons.school_rounded,
-                      size: 80,
-                      color: AppConstants.primaryColor,
+                  ),
+                ),
+                
+                // Footer Section
+                const SizedBox(height: 32),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      '© 2026 Research CSE',
+                      style: AppTextStyles.caption.copyWith(color: AppColors.mediumGray),
                     ),
-                  ),
-                  const SizedBox(height: AppConstants.paddingXLarge),
-
-                  // App Name
-                  Text(
-                    AppConstants.appName,
-                    style: const TextStyle(
-                      fontSize: 36,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                      letterSpacing: 1.5,
+                    const SizedBox(width: 16),
+                    Text(
+                      'v1.0.0',
+                      style: AppTextStyles.caption.copyWith(color: AppColors.mediumGray),
                     ),
-                  ),
-                  const SizedBox(height: AppConstants.paddingSmall),
-                  Text(
-                    'Research Management System',
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.white.withOpacity(0.9),
-                      letterSpacing: 0.5,
-                    ),
-                  ),
-                  const SizedBox(height: AppConstants.paddingXLarge * 2),
-
-                  // Admin Login Button
-                  _buildLoginButton(
-                    context: context,
-                    label: 'Admin Login',
-                    icon: Icons.admin_panel_settings_rounded,
-                    color: Colors.deepPurple,
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const AdminLoginScreen(),
-                        ),
-                      );
-                    },
-                  ),
-                  const SizedBox(height: AppConstants.paddingMedium),
-
-                  // Faculty Login Button
-                  _buildLoginButton(
-                    context: context,
-                    label: 'Faculty Login',
-                    icon: Icons.person_outline_rounded,
-                    color: Colors.teal,
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const FacultyLoginScreen(),
-                        ),
-                      );
-                    },
-                  ),
-                  const SizedBox(height: AppConstants.paddingMedium),
-
-
-                  const SizedBox(height: AppConstants.paddingXLarge),
-
-                  // Footer
-                  Text(
-                    '© 2026 Research CSE',
-                    style: TextStyle(
-                      color: Colors.white.withOpacity(0.7),
-                      fontSize: 12,
-                    ),
-                  ),
-                ],
-              ),
+                  ],
+                ),
+              ],
             ),
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildLoginButton({
-    required BuildContext context,
-    required String label,
-    required IconData icon,
-    required Color color,
-    required VoidCallback onTap,
-  }) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(AppConstants.borderRadius),
-        child: Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(
-            vertical: AppConstants.paddingLarge,
-            horizontal: AppConstants.paddingMedium,
-          ),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(AppConstants.borderRadius),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.1),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(AppConstants.paddingMedium),
-                decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(AppConstants.borderRadius),
-                ),
-                child: Icon(
-                  icon,
-                  size: 32,
-                  color: color,
-                ),
-              ),
-              const SizedBox(width: AppConstants.paddingMedium),
-              Expanded(
-                child: Text(
-                  label,
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                    color: color,
-                  ),
-                ),
-              ),
-              Icon(
-                Icons.arrow_forward_ios_rounded,
-                color: color,
-                size: 20,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _showComingSoonDialog(BuildContext context, String role) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppConstants.borderRadius),
-        ),
-        title: Row(
-          children: [
-            Icon(Icons.info_outline, color: AppConstants.primaryColor),
-            const SizedBox(width: AppConstants.paddingSmall),
-            const Text('Coming Soon'),
-          ],
-        ),
-        content: Text('$role login will be available in the next update.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('OK'),
-          ),
-        ],
       ),
     );
   }

@@ -6,6 +6,7 @@ import 'providers/auth_provider.dart';
 import 'providers/faculty_provider.dart';
 import 'providers/admin_provider.dart';
 import 'screens/login_selection_screen.dart';
+import 'theme/app_theme.dart';
 import 'utils/constants.dart';
 
 void main() async {
@@ -47,16 +48,7 @@ class MyApp extends StatelessWidget {
       child: MaterialApp(
         title: AppConstants.appName,
         debugShowCheckedModeBanner: false,
-        theme: ThemeData(
-          // Color Scheme
-          useMaterial3: true,
-          colorScheme: ColorScheme.fromSeed(
-            seedColor: Colors.blue,
-          ),
-          
-          // Font Family
-          fontFamily: 'Roboto',
-        ),
+        theme: AppTheme.lightTheme,
         home: const LoginSelectionScreen(),
       ),
     );

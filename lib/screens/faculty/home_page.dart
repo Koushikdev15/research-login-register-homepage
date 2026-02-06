@@ -4,7 +4,8 @@ import 'package:image_picker/image_picker.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/faculty_provider.dart';
 import '../../services/storage_service.dart';
-import '../../utils/constants.dart';
+import '../../theme/app_colors.dart';
+import '../../theme/app_text_styles.dart';
 import '../../widgets/profile_picture_widget.dart';
 import '../../widgets/info_display_card.dart';
 import '../../widgets/work_experience_card.dart';
@@ -40,24 +41,23 @@ class _HomePageState extends State<HomePage> {
         final authProvider = Provider.of<AuthProvider>(context, listen: false);
         final userId = authProvider.currentUserId!;
         
-        // Show loading via snackbar or local state if desired
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Uploading profile picture...')),
         );
 
         await _storageService.uploadProfilePicture(userId, image);
-        await authProvider.refreshUserData(); // Refresh to get new URL
+        await authProvider.refreshUserData();
 
         if (mounted) {
            ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Profile picture updated!'), backgroundColor: AppConstants.successColor),
+            const SnackBar(content: Text('Profile picture updated!'), backgroundColor: AppColors.successGreen),
           );
         }
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: AppConstants.errorColor),
+          SnackBar(content: Text('Error: $e'), backgroundColor: AppColors.errorRed),
         );
       }
     }
@@ -73,7 +73,6 @@ class _HomePageState extends State<HomePage> {
       return const Center(child: CircularProgressIndicator());
     }
 
-    // Refresh if data is missing but user is logged in
     if (facultyProvider.personalInfo == null && !facultyProvider.isLoading) {
        return Center(
          child: ElevatedButton(
@@ -87,187 +86,222 @@ class _HomePageState extends State<HomePage> {
     
     return RefreshIndicator(
       onRefresh: () => facultyProvider.loadFacultyProfile(authProvider.currentUserId!),
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(AppConstants.paddingMedium),
-        child: Column(
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final isWide = constraints.maxWidth > 900;
+          
+          return SingleChildScrollView(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              children: [
+                // Profile Header
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24.0),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        ProfilePictureWidget(
+                          imageUrl: user?.profilePictureURL,
+                          size: 80,
+                          showEditIcon: true,
+                          onTap: _updateProfilePicture,
+                        ),
+                        const SizedBox(width: 24),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                personalInfo.name,
+                                style: AppTextStyles.h3,
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                personalInfo.designation,
+                                style: AppTextStyles.bodyLarge.copyWith(color: AppColors.academicBlue, fontWeight: FontWeight.bold),
+                              ),
+                              Text(
+                                personalInfo.department,
+                                style: AppTextStyles.bodyRegular.copyWith(color: AppColors.mediumGray),
+                              ),
+                            ],
+                          ),
+                        ),
+                        // Action Buttons could go here
+                        IconButton(
+                          icon: const Icon(Icons.logout, color: AppColors.errorRed),
+                          tooltip: 'Logout',
+                          onPressed: () async {
+                             await authProvider.signOut();
+                             if (mounted) {
+                               Navigator.of(context).pushAndRemoveUntil(
+                                 MaterialPageRoute(builder: (context) => const LoginSelectionScreen()),
+                                 (route) => false,
+                               );
+                             }
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 24),
+
+                // Grid or Column Content
+                 isWide 
+                 ? Row(
+                     crossAxisAlignment: CrossAxisAlignment.start,
+                     children: [
+                       Expanded(
+                         child: Column(
+                           children: [
+                             _buildPersonalInfoCard(personalInfo),
+                             const SizedBox(height: 24),
+                             _buildResearchIDsCard(facultyProvider),
+                           ],
+                         ),
+                       ),
+                       const SizedBox(width: 24),
+                       Expanded(
+                         child: Column(
+                           children: [
+                             _buildCITExperienceCard(facultyProvider),
+                             const SizedBox(height: 24),
+                             _buildExperienceCard(facultyProvider),
+                             const SizedBox(height: 24),
+                             _buildEducationCard(facultyProvider),
+                           ],
+                         ),
+                       ),
+                     ],
+                   )
+                 : Column(
+                     children: [
+                       _buildPersonalInfoCard(personalInfo),
+                       const SizedBox(height: 24),
+                       _buildResearchIDsCard(facultyProvider),
+                       const SizedBox(height: 24),
+                       _buildCITExperienceCard(facultyProvider),
+                       const SizedBox(height: 24),
+                       _buildExperienceCard(facultyProvider),
+                       const SizedBox(height: 24),
+                       _buildEducationCard(facultyProvider),
+                     ],
+                   ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildPersonalInfoCard(dynamic personalInfo) {
+    return InfoDisplayCard(
+       title: 'Personal Information',
+       icon: Icons.person_outline,
+       initiallyExpanded: true,
+       child: Column(
+         children: [
+           _buildInfoRow('Age', '${personalInfo.age}'),
+           _buildInfoRow('Date of Birth', personalInfo.dateOfBirth),
+           _buildInfoRow('Date of Joining', personalInfo.dateOfJoining),
+           _buildInfoRow('Contact', personalInfo.contactNo),
+           _buildInfoRow('WhatsApp', personalInfo.whatsappNo),
+           _buildInfoRow('Email', personalInfo.mailId),
+           _buildInfoRow('PAN', personalInfo.panNumber),
+           _buildInfoRow('Aadhar', personalInfo.aadharNumber),
+         ],
+       ),
+    );
+  }
+
+  Widget _buildResearchIDsCard(FacultyProvider provider) {
+    if (provider.researchIDs == null) return const SizedBox.shrink();
+    return InfoDisplayCard(
+      title: 'Research IDs',
+      icon: Icons.science_outlined,
+      child: Column(
+        children: [
+          _buildInfoRow('Vidwan ID', provider.researchIDs!.vidwanId ?? 'N/A'),
+          _buildInfoRow('Scopus ID', provider.researchIDs!.scopusId ?? 'N/A'),
+          _buildInfoRow('ORCID', provider.researchIDs!.orcidId ?? 'N/A'),
+          _buildInfoRow('Google Scholar', provider.researchIDs!.googleScholarId ?? 'N/A'),
+        ],
+      ),
+    );
+  }
+  
+  Widget _buildCITExperienceCard(FacultyProvider provider) {
+    if (provider.citExperience == null) return const SizedBox.shrink();
+    return Card(
+      color: AppColors.academicBlue,
+      child: Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            // Profile Header
+            const Text(
+              'Experience at CIT',
+              style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+            ),
             Container(
-              padding: const EdgeInsets.all(AppConstants.paddingMedium),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(AppConstants.borderRadius),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 10,
-                  ),
-                ],
+                borderRadius: BorderRadius.circular(20),
               ),
-              child: Column(
-                children: [
-                  Row(
-                    children: [
-                      ProfilePictureWidget(
-                        imageUrl: user?.profilePictureURL,
-                        size: 80,
-                        showEditIcon: true,
-                        onTap: _updateProfilePicture,
-                      ),
-                      const SizedBox(width: AppConstants.paddingMedium),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              personalInfo.name,
-                              style: AppConstants.subheadingStyle.copyWith(fontSize: 20),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              personalInfo.designation,
-                              style: const TextStyle(color: AppConstants.primaryColor, fontWeight: FontWeight.bold),
-                            ),
-                            Text(
-                              personalInfo.department,
-                              style: const TextStyle(color: Colors.grey),
-                            ),
-                          ],
-                        ),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.logout, color: Colors.red),
-                        onPressed: () async {
-                           await authProvider.signOut();
-                           if (mounted) {
-                             Navigator.of(context).pushAndRemoveUntil(
-                               MaterialPageRoute(builder: (context) => const LoginSelectionScreen()),
-                               (route) => false,
-                             );
-                           }
-                        },
-                      ),
-                    ],
-                  ),
-                ],
+              child: Text(
+                '${provider.citExperience!.yearsInCIT} Years',
+                style: const TextStyle(color: AppColors.academicBlue, fontWeight: FontWeight.bold),
               ),
             ),
-            const SizedBox(height: AppConstants.paddingMedium),
-
-            // Personal Info Card
-            InfoDisplayCard(
-               title: 'Personal Information',
-               icon: Icons.person_outline,
-               initiallyExpanded: true,
-               child: Column(
-                 children: [
-                   _buildInfoRow('Age', '${personalInfo.age}'),
-                   _buildInfoRow('Date of Birth', personalInfo.dateOfBirth),
-                   _buildInfoRow('Date of Joining', personalInfo.dateOfJoining),
-                   _buildInfoRow('Contact', personalInfo.contactNo),
-                   _buildInfoRow('Email', personalInfo.mailId),
-                   _buildInfoRow('PAN', personalInfo.panNumber),
-                   _buildInfoRow('Aadhar', personalInfo.aadharNumber),
-                 ],
-               ),
-            ),
-
-            // Research IDs Card
-            if (facultyProvider.researchIDs != null)
-              InfoDisplayCard(
-                title: 'Research IDs',
-                icon: Icons.science_outlined,
-                child: Column(
-                  children: [
-                    _buildInfoRow('Vidwan ID', facultyProvider.researchIDs!.vidwanId ?? 'N/A'),
-                    _buildInfoRow('Scopus ID', facultyProvider.researchIDs!.scopusId ?? 'N/A'),
-                    _buildInfoRow('ORCID', facultyProvider.researchIDs!.orcidId ?? 'N/A'),
-                    _buildInfoRow('Google Scholar', facultyProvider.researchIDs!.googleScholarId ?? 'N/A'),
-                  ],
-                ),
-              ),
-
-             // CIT Experience
-             if (facultyProvider.citExperience != null)
-               Container(
-                 width: double.infinity,
-                 margin: const EdgeInsets.only(bottom: AppConstants.paddingMedium),
-                 padding: const EdgeInsets.all(AppConstants.paddingMedium),
-                 decoration: BoxDecoration(
-                   gradient: LinearGradient(
-                     colors: [AppConstants.primaryColor, AppConstants.primaryColor.withOpacity(0.8)],
-                   ),
-                   borderRadius: BorderRadius.circular(AppConstants.borderRadius),
-                 ),
-                 child: Row(
-                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                   children: [
-                     const Text(
-                       'Experience at CIT',
-                       style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
-                     ),
-                     Container(
-                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                       decoration: BoxDecoration(
-                         color: Colors.white,
-                         borderRadius: BorderRadius.circular(20),
-                       ),
-                       child: Text(
-                         '${facultyProvider.citExperience!.yearsInCIT} Years',
-                         style: const TextStyle(color: AppConstants.primaryColor, fontWeight: FontWeight.bold),
-                       ),
-                     ),
-                   ],
-                 ),
-               ),
-
-            // Work Experience
-            if (facultyProvider.workExperiences.isNotEmpty)
-              InfoDisplayCard(
-                title: 'Work Experience',
-                icon: Icons.work_outline,
-                child: Column(
-                  children: facultyProvider.workExperiences.map((exp) => WorkExperienceCard(experience: exp, isReadOnly: true)).toList(),
-                ),
-              ),
-
-            // Education
-            if (facultyProvider.educationQualifications.isNotEmpty)
-              InfoDisplayCard(
-                title: 'Education',
-                icon: Icons.school_outlined,
-                child: Column(
-                  children: facultyProvider.educationQualifications.map((edu) => EducationQualificationCard(education: edu, isReadOnly: true)).toList(),
-                ),
-              ),
           ],
         ),
       ),
     );
   }
 
+  Widget _buildExperienceCard(FacultyProvider provider) {
+    if (provider.workExperiences.isEmpty) return const SizedBox.shrink();
+    return InfoDisplayCard(
+      title: 'Work Experience',
+      icon: Icons.work_outline,
+      child: Column(
+        children: provider.workExperiences.map((exp) => WorkExperienceCard(experience: exp, isReadOnly: true)).toList(),
+      ),
+    );
+  }
+
+  Widget _buildEducationCard(FacultyProvider provider) {
+    if (provider.educationQualifications.isEmpty) return const SizedBox.shrink();
+    return InfoDisplayCard(
+      title: 'Education',
+      icon: Icons.school_outlined,
+      child: Column(
+        children: provider.educationQualifications.map((edu) => EducationQualificationCard(education: edu, isReadOnly: true)).toList(),
+      ),
+    );
+  }
+
   Widget _buildInfoRow(String label, String value) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8.0),
+      padding: const EdgeInsets.only(bottom: 12.0),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(
-            width: 120,
+            width: 140,
             child: Text(
               label,
-              style: const TextStyle(
-                color: Colors.grey,
-                fontWeight: FontWeight.w500,
-              ),
+              style: AppTextStyles.bodyRegular.copyWith(color: AppColors.mediumGray),
             ),
           ),
           Expanded(
             child: Text(
               value,
-              style: const TextStyle(
-                fontWeight: FontWeight.w500,
-              ),
+              style: AppTextStyles.bodyRegular.copyWith(color: AppColors.charcoal, fontWeight: FontWeight.w500),
             ),
           ),
         ],

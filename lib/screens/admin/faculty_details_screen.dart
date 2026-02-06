@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 import '../../providers/admin_provider.dart';
 import '../../models/faculty_profile.dart';
 import '../../utils/constants.dart';
+import '../../theme/app_colors.dart';
+import '../../theme/app_text_styles.dart';
 import 'admin_general_info_screen.dart';
 import '../../services/pdf_service.dart';
 
@@ -25,11 +27,21 @@ class _FacultyDetailsScreenState extends State<FacultyDetailsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.offWhite,
       appBar: AppBar(
-        title: const Text('Faculty Details'),
+        backgroundColor: AppColors.pureWhite,
+        centerTitle: false,
+        elevation: 2,
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Faculty Directory', style: AppTextStyles.h4.copyWith(color: AppColors.universityNavy)),
+            Text('Department of CSE', style: AppTextStyles.caption.copyWith(color: AppColors.mediumGray)),
+          ],
+        ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.logout),
+            icon: const Icon(Icons.logout, color: AppColors.errorRed),
             onPressed: () {
               // Confirm Logout
               showDialog(
@@ -54,12 +66,13 @@ class _FacultyDetailsScreenState extends State<FacultyDetailsScreen> {
               );
             },
           ),
+          const SizedBox(width: 16),
         ],
       ),
       body: Consumer<AdminProvider>(
         builder: (context, adminProvider, child) {
           if (adminProvider.isLoading) {
-            return const Center(child: CircularProgressIndicator());
+            return const Center(child: CircularProgressIndicator(color: AppColors.universityNavy));
           }
 
           if (adminProvider.errorMessage != null) {
@@ -69,7 +82,7 @@ class _FacultyDetailsScreenState extends State<FacultyDetailsScreen> {
                 children: [
                   Text(
                     adminProvider.errorMessage!,
-                    style: const TextStyle(color: Colors.red),
+                    style: AppTextStyles.bodyRegular.copyWith(color: AppColors.errorRed),
                   ),
                   const SizedBox(height: 16),
                   ElevatedButton(
@@ -83,73 +96,91 @@ class _FacultyDetailsScreenState extends State<FacultyDetailsScreen> {
 
           return Column(
             children: [
-              // Search and Sort Header
+              // Toolbar Section
               Container(
-                padding: const EdgeInsets.all(AppConstants.paddingMedium),
-                color: Colors.blue[50],
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                decoration: const BoxDecoration(
+                  color: AppColors.pureWhite,
+                  border: Border(bottom: BorderSide(color: AppColors.divider)),
+                ),
                 child: Row(
                   children: [
                     // Search Bar
                     Expanded(
                       flex: 3,
-                      child: TextField(
-                        controller: _searchController,
-                        decoration: InputDecoration(
-                          hintText: 'Search by Faculty Name',
-                          prefixIcon: const Icon(Icons.search),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10),
+                      child: Container(
+                        constraints: const BoxConstraints(maxWidth: 320),
+                        child: TextField(
+                          controller: _searchController,
+                          decoration: InputDecoration(
+                            hintText: 'Search by Faculty Name',
+                            prefixIcon: const Icon(Icons.search, color: AppColors.mediumGray),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(4),
+                              borderSide: const BorderSide(color: AppColors.inputBorder),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                               borderRadius: BorderRadius.circular(4),
+                               borderSide: const BorderSide(color: AppColors.inputBorder),
+                            ),
+                            contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 16),
+                            filled: true,
+                            fillColor: AppColors.pureWhite,
                           ),
-                          contentPadding: const EdgeInsets.symmetric(
-                              vertical: 0, horizontal: 16),
-                          filled: true,
-                          fillColor: Colors.white,
+                          onChanged: adminProvider.setSearchQuery,
                         ),
-                        onChanged: (value) {
-                          adminProvider.setSearchQuery(value);
-                        },
                       ),
                     ),
-                    const SizedBox(width: 16),
-                    // Sort Dropdown
+                    const SizedBox(width: 24),
+                    // Filters
                     Expanded(
                       flex: 2,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: Colors.grey),
-                        ),
-                        child: DropdownButtonHideUnderline(
-                          child: DropdownButton<SortOption>(
-                            value: adminProvider.currentSort,
-                            isExpanded: true,
-                            items: const [
-                              DropdownMenuItem(
-                                value: SortOption.nameAZ,
-                                child: Text('Name (A-Z)'),
+                      child: Row(
+                        children: [
+                          const Text('Sort by: ', style: AppTextStyles.bodySmall),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12),
+                              decoration: BoxDecoration(
+                                color: AppColors.pureWhite,
+                                borderRadius: BorderRadius.circular(4),
+                                border: Border.all(color: AppColors.inputBorder),
                               ),
-                              DropdownMenuItem(
-                                value: SortOption.nameZA,
-                                child: Text('Name (Z-A)'),
+                              child: DropdownButtonHideUnderline(
+                                child: DropdownButton<SortOption>(
+                                  value: adminProvider.currentSort,
+                                  isExpanded: true,
+                                  icon: const Icon(Icons.arrow_drop_down, color: AppColors.mediumGray),
+                                  style: AppTextStyles.bodyRegular,
+                                  items: const [
+                                    DropdownMenuItem(
+                                      value: SortOption.nameAZ,
+                                      child: Text('Name (A-Z)'),
+                                    ),
+                                    DropdownMenuItem(
+                                      value: SortOption.nameZA,
+                                      child: Text('Name (Z-A)'),
+                                    ),
+                                    DropdownMenuItem(
+                                      value: SortOption.experienceHighToLow,
+                                      child: Text('Experience (High-Low)'),
+                                    ),
+                                    DropdownMenuItem(
+                                      value: SortOption.experienceLowToHigh,
+                                      child: Text('Experience (Low-High)'),
+                                    ),
+                                  ],
+                                  onChanged: (value) {
+                                    if (value != null) {
+                                      adminProvider.setSortOption(value);
+                                    }
+                                  },
+                                ),
                               ),
-                              DropdownMenuItem(
-                                value: SortOption.experienceHighToLow,
-                                child: Text('Experience (High-Low)'),
-                              ),
-                              DropdownMenuItem(
-                                value: SortOption.experienceLowToHigh,
-                                child: Text('Experience (Low-High)'),
-                              ),
-                            ],
-                            onChanged: (value) {
-                              if (value != null) {
-                                adminProvider.setSortOption(value);
-                              }
-                            },
+                            ),
                           ),
-                        ),
+                        ],
                       ),
                     ),
                   ],
@@ -159,9 +190,9 @@ class _FacultyDetailsScreenState extends State<FacultyDetailsScreen> {
               // Faculty List
               Expanded(
                 child: adminProvider.faculty.isEmpty
-                    ? const Center(child: Text('No faculty found matching your search.'))
+                    ? Center(child: Text('No faculty found matching your search.', style: AppTextStyles.bodyRegular.copyWith(color: AppColors.mediumGray)))
                     : ListView.builder(
-                        padding: const EdgeInsets.all(AppConstants.paddingMedium),
+                        padding: const EdgeInsets.all(24),
                         itemCount: adminProvider.faculty.length,
                         itemBuilder: (context, index) {
                           return _FacultyCard(
@@ -186,20 +217,23 @@ class _FacultyCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
-      margin: const EdgeInsets.only(bottom: AppConstants.paddingMedium),
-      elevation: 3,
+      margin: const EdgeInsets.only(bottom: 16),
+      elevation: 2,
+      shadowColor: Colors.black.withOpacity(0.05),
+      color: AppColors.pureWhite,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(8),
+        side: const BorderSide(color: AppColors.cardBorder),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(24),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Left: Profile Picture (20% approx)
+            // Left: Profile Picture
             CircleAvatar(
               radius: 40,
-              backgroundColor: Colors.grey[200],
+              backgroundColor: AppColors.lightGray,
               backgroundImage: faculty.userModel.profilePictureURL != null
                   ? NetworkImage(faculty.userModel.profilePictureURL!)
                   : null,
@@ -208,53 +242,60 @@ class _FacultyCard extends StatelessWidget {
                       faculty.personalInfo.name.isNotEmpty
                           ? faculty.personalInfo.name[0]
                           : '?',
-                      style: const TextStyle(fontSize: 32),
+                      style: const TextStyle(fontSize: 32, color: AppColors.mediumGray),
                     )
                   : null,
             ),
-            const SizedBox(width: 16),
+            const SizedBox(width: 24),
 
-            // Middle: Info (50% approx)
+            // Middle: Info
             Expanded(
               flex: 5,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    faculty.personalInfo.name,
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
+                  Row(
+                    children: [
+                      Text(
+                        faculty.personalInfo.name,
+                        style: AppTextStyles.h4,
+                      ),
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: AppColors.offWhite,
+                          borderRadius: BorderRadius.circular(4),
+                          border: Border.all(color: AppColors.divider),
+                        ),
+                        child: Text(
+                          faculty.personalInfo.department,
+                          style: AppTextStyles.caption.copyWith(color: AppColors.mediumGray),
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 4),
                   Text(
                     faculty.personalInfo.designation,
-                     style: TextStyle(
-                      color: Colors.grey[800],
+                     style: AppTextStyles.bodyRegular.copyWith(
+                      color: AppColors.charcoal,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
-                  Text(
-                    faculty.personalInfo.department,
-                    style: TextStyle(color: Colors.grey[600]),
-                  ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 12),
                   // Dynamic CIT Experience Badge
                   if (faculty.calculatedCITYears > 0)
                      Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                       decoration: BoxDecoration(
-                        color: Colors.blue[50],
-                        borderRadius: BorderRadius.circular(4),
-                        border: Border.all(color: Colors.blue.withOpacity(0.3)),
+                        color: AppColors.academicBlue.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(16),
                       ),
                       child: Text(
                         '${faculty.calculatedCITYears} years in CIT',
-                         style: TextStyle(
-                          fontSize: 12, 
-                          color: Colors.blue[800],
-                          fontWeight: FontWeight.bold
+                         style: AppTextStyles.label.copyWith(
+                          color: AppColors.academicBlue,
                         ),
                       ),
                     ),
@@ -262,15 +303,16 @@ class _FacultyCard extends StatelessWidget {
               ),
             ),
 
-            const SizedBox(width: 16),
+            const SizedBox(width: 24),
 
-            // Right: Actions (30% approx)
+            // Right: Actions
             Expanded(
               flex: 3,
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  OutlinedButton(
+                  _ActionButton(
+                    label: 'View General Info',
                     onPressed: () {
                       Navigator.push(
                         context,
@@ -280,40 +322,30 @@ class _FacultyCard extends StatelessWidget {
                         ),
                       );
                     },
-                    style: OutlinedButton.styleFrom(
-                       alignment: Alignment.centerLeft,
-                    ),
-                    child: const Text('General Info'),
                   ),
-                  const SizedBox(height: 4),
-                  OutlinedButton(
+                  _ActionButton(
+                    label: 'Research/Patent',
                     onPressed: () => _showComingSoon(context, 'Research/Patent'),
-                     style: OutlinedButton.styleFrom(
-                       alignment: Alignment.centerLeft,
-                    ),
-                    child: const Text('Research/Patent'),
                   ),
-                   const SizedBox(height: 4),
-                  OutlinedButton(
+                  _ActionButton(
+                    label: 'FDB/Certifications',
                     onPressed: () => _showComingSoon(context, 'FDB/Certifications'),
-                     style: OutlinedButton.styleFrom(
-                       alignment: Alignment.centerLeft,
-                    ),
-                    child: const Text('FDB/Certifications'),
                   ),
-                   const SizedBox(height: 8),
-                   ElevatedButton.icon(
-                     onPressed: () {
-                       // Generate PDF
-                       PDFService.generateFacultyPDF(faculty);
-                     }, 
-                     icon: const Icon(Icons.print, size: 18),
-                     label: const Text('Print'),
-                     style: ElevatedButton.styleFrom(
-                       backgroundColor: Colors.teal,
-                       foregroundColor: Colors.white,
-                     ),
-                   )
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        PDFService.generateFacultyPDF(faculty);
+                      }, 
+                      icon: const Icon(Icons.print, size: 18),
+                      label: const Text('Export PDF'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.goldAccent,
+                        side: const BorderSide(color: AppColors.goldAccent),
+                      ),
+                    ),
+                  )
                 ],
               ),
             ),
@@ -335,6 +367,27 @@ class _FacultyCard extends StatelessWidget {
             child: const Text('OK'),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _ActionButton extends StatelessWidget {
+  final String label;
+  final VoidCallback onPressed;
+
+  const _ActionButton({required this.label, required this.onPressed});
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onPressed,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 6),
+        child: Text(
+          label,
+          style: AppTextStyles.label.copyWith(color: AppColors.academicBlue),
+        ),
       ),
     );
   }
