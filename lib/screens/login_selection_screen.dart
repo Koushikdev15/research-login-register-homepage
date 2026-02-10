@@ -35,8 +35,8 @@ class LoginSelectionScreen extends StatelessWidget {
                     child: Column(
                       children: [
                         // Header Section
-                        Image.network(
-                          'https://citchennai.edu.in/wp-content/uploads/2021/03/CIT-Logo-PNG.png',
+                        Image.asset(
+                          'assets/cit_logo.png',
                           height: 100,
                           errorBuilder: (context, error, stackTrace) => const Icon(
                             Icons.school,
