@@ -3,7 +3,7 @@ import '../../theme/app_colors.dart';
 import '../../theme/app_text_styles.dart';
 import 'home_page.dart';
 import 'research_page.dart';
-import 'fdb_page.dart';
+import 'fdb_selection_page.dart';
 
 class FacultyDashboard extends StatefulWidget {
   const FacultyDashboard({super.key});
@@ -15,10 +15,11 @@ class FacultyDashboard extends StatefulWidget {
 class _FacultyDashboardState extends State<FacultyDashboard> {
   int _currentIndex = 0;
 
+  // ✅ ONLY CHANGE IS HERE
   final List<Widget> _pages = const [
     HomePage(),
     ResearchPage(),
-    FDBPage(),
+    FdbSelectionPage(),
   ];
 
   @override
@@ -36,9 +37,9 @@ class _FacultyDashboardState extends State<FacultyDashboard> {
             onPressed: () {},
           ),
           const CircleAvatar(
-             radius: 16,
-             backgroundColor: AppColors.academicBlue,
-             child: Icon(Icons.person, size: 20, color: Colors.white),
+            radius: 16,
+            backgroundColor: AppColors.academicBlue,
+            child: Icon(Icons.person, size: 20, color: Colors.white),
           ),
           const SizedBox(width: 16),
         ],
@@ -59,10 +60,14 @@ class _FacultyDashboardState extends State<FacultyDashboard> {
                   labelType: NavigationRailLabelType.all,
                   backgroundColor: AppColors.pureWhite,
                   indicatorColor: AppColors.academicBlue.withOpacity(0.1),
-                  selectedLabelTextStyle: AppTextStyles.label.copyWith(color: AppColors.academicBlue),
-                  unselectedLabelTextStyle: AppTextStyles.label.copyWith(color: AppColors.mediumGray),
-                  selectedIconTheme: const IconThemeData(color: AppColors.academicBlue),
-                  unselectedIconTheme: const IconThemeData(color: AppColors.mediumGray),
+                  selectedLabelTextStyle:
+                      AppTextStyles.label.copyWith(color: AppColors.academicBlue),
+                  unselectedLabelTextStyle:
+                      AppTextStyles.label.copyWith(color: AppColors.mediumGray),
+                  selectedIconTheme:
+                      const IconThemeData(color: AppColors.academicBlue),
+                  unselectedIconTheme:
+                      const IconThemeData(color: AppColors.mediumGray),
                   elevation: 1,
                   destinations: const [
                     NavigationRailDestination(
