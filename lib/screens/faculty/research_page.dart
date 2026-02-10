@@ -19,6 +19,8 @@ class _ResearchPageState extends State<ResearchPage> {
   Map<String, List<WorkItem>> _grouped = {};
   String _selectedType = 'all';
 
+  final Map<String, bool> _expandedYears = {};
+
   @override
   void initState() {
     super.initState();
@@ -31,8 +33,8 @@ class _ResearchPageState extends State<ResearchPage> {
 
     if (orcidId == null || orcidId.isEmpty) {
       setState(() {
-        _loading = false;
         _error = 'ORCID ID not found in your profile';
+        _loading = false;
       });
       return;
     }
@@ -46,9 +48,9 @@ class _ResearchPageState extends State<ResearchPage> {
         _grouped = grouped;
         _loading = false;
       });
-    } catch (e) {
+    } catch (_) {
       setState(() {
-        _error = 'Failed to load research works';
+        _error = 'Failed to load research data';
         _loading = false;
       });
     }
@@ -61,36 +63,176 @@ class _ResearchPageState extends State<ResearchPage> {
     }
 
     if (_error != null) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.error_outline, size: 48, color: Colors.red),
-            const SizedBox(height: 16),
-            Text(_error!, style: const TextStyle(fontSize: 16)),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: _loadResearch,
-              child: const Text('Retry'),
-            ),
-          ],
-        ),
-      );
+      return Center(child: Text(_error!));
     }
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA),
-      body: Column(
-        children: [
-          _CountsSection(counts: _counts),
-          _FilterBar(
-            selected: _selectedType,
-            onChanged: (v) => setState(() => _selectedType = v),
+      backgroundColor: const Color(0xFF0E1117),
+      body: CustomScrollView(
+        slivers: [
+          const SliverToBoxAdapter(child: _ResearchHeader()),
+          SliverToBoxAdapter(child: _CountsGrid(counts: _counts)),
+          SliverToBoxAdapter(
+            child: _FilterBar(
+              selected: _selectedType,
+              onChanged: (v) => setState(() => _selectedType = v),
+            ),
           ),
-          Expanded(
-            child: _WorksList(
-              grouped: _grouped,
-              selectedType: _selectedType,
+          _WorksSliver(
+            grouped: _grouped,
+            selectedType: _selectedType,
+            expandedYears: _expandedYears,
+            onToggleYear: (y) {
+              setState(() {
+                _expandedYears[y] = !(_expandedYears[y] ?? true);
+              });
+            },
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/* =======================================================
+   🔹 HEADER (DARK / GLASS)
+   ======================================================= */
+
+class _ResearchHeader extends StatelessWidget {
+  const _ResearchHeader();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(24, 56, 24, 36),
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Color(0xFF111827), Color(0xFF1F2937)],
+        ),
+      ),
+      child: const Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Research Portfolio',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 28,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 0.5,
+            ),
+          ),
+          SizedBox(height: 8),
+          Text(
+            'Authoritative academic works synced from ORCID',
+            style: TextStyle(color: Colors.white70),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/* =======================================================
+   🔹 COUNTS GRID (GLASS METRICS)
+   ======================================================= */
+
+class _CountsGrid extends StatelessWidget {
+  final Map<String, int> counts;
+  const _CountsGrid({required this.counts});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final crossAxisCount = constraints.maxWidth > 1100 ? 7 : 3;
+
+          return GridView.count(
+            crossAxisCount: crossAxisCount,
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            crossAxisSpacing: 14,
+            mainAxisSpacing: 14,
+            children: _items().map((e) {
+              return _MetricCard(
+                label: e.label,
+                value: counts[e.key] ?? 0,
+                icon: e.icon,
+                color: e.color,
+              );
+            }).toList(),
+          );
+        },
+      ),
+    );
+  }
+
+  List<_CountItem> _items() => [
+        _CountItem('total', 'Total', Icons.library_books, Color(0xFF6366F1)),
+        _CountItem('journal', 'Journals', Icons.article, Color(0xFF22D3EE)),
+        _CountItem('conference', 'Conferences', Icons.groups, Color(0xFF2DD4BF)),
+        _CountItem('bookChapter', 'Chapters', Icons.menu_book, Color(0xFFFBBF24)),
+        _CountItem('book', 'Books', Icons.book, Color(0xFFA78BFA)),
+        _CountItem('patent', 'Patents', Icons.gavel, Color(0xFF4ADE80)),
+        _CountItem('design', 'Designs', Icons.architecture, Color(0xFF38BDF8)),
+      ];
+}
+
+class _MetricCard extends StatelessWidget {
+  final String label;
+  final int value;
+  final IconData icon;
+  final Color color;
+
+  const _MetricCard({
+    required this.label,
+    required this.value,
+    required this.icon,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(22),
+        gradient: LinearGradient(
+          colors: [
+            color.withOpacity(0.25),
+            color.withOpacity(0.10),
+          ],
+        ),
+        border: Border.all(color: color.withOpacity(0.35)),
+        boxShadow: [
+          BoxShadow(
+            color: color.withOpacity(0.35),
+            blurRadius: 18,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, color: color, size: 26),
+          const SizedBox(height: 12),
+          Text(
+            '$value',
+            style: const TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: const TextStyle(
+              color: Colors.white70,
+              fontSize: 12,
             ),
           ),
         ],
@@ -99,47 +241,18 @@ class _ResearchPageState extends State<ResearchPage> {
   }
 }
 
-class _CountsSection extends StatelessWidget {
-  final Map<String, int> counts;
-  const _CountsSection({required this.counts});
+class _CountItem {
+  final String key;
+  final String label;
+  final IconData icon;
+  final Color color;
 
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: Wrap(
-        spacing: 10,
-        runSpacing: 10,
-        children: counts.entries.where((e) => e.key != 'total').map((e) {
-          return Chip(
-            backgroundColor: Colors.white,
-            side: BorderSide(color: Colors.grey.shade300),
-            label: Text('${_label(e.key)}: ${e.value}'),
-          );
-        }).toList(),
-      ),
-    );
-  }
-
-  String _label(String k) {
-    switch (k) {
-      case 'journal':
-        return 'Journals';
-      case 'conference':
-        return 'Conferences';
-      case 'bookChapter':
-        return 'Book Chapters';
-      case 'book':
-        return 'Books';
-      case 'patent':
-        return 'Patents';
-      case 'design':
-        return 'Designs';
-      default:
-        return k;
-    }
-  }
+  _CountItem(this.key, this.label, this.icon, this.color);
 }
+
+/* =======================================================
+   🔹 FILTER BAR
+   ======================================================= */
 
 class _FilterBar extends StatelessWidget {
   final String selected;
@@ -153,28 +266,28 @@ class _FilterBar extends StatelessWidget {
       'all': 'All',
       'journal-article': 'Journals',
       'conference-paper': 'Conferences',
-      'book-chapter': 'Book Chapters',
+      'book-chapter': 'Chapters',
       'book': 'Books',
       'patent': 'Patents',
       'design': 'Designs',
     };
 
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.symmetric(horizontal: 12),
-      child: Row(
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      child: Wrap(
+        spacing: 10,
         children: filters.entries.map((e) {
-          return Padding(
-            padding: const EdgeInsets.only(right: 8),
-            child: ChoiceChip(
-              label: Text(e.value),
-              selected: selected == e.key,
-              onSelected: (_) => onChanged(e.key),
-              selectedColor: Theme.of(context).primaryColor,
-              labelStyle: TextStyle(
-                color: selected == e.key ? Colors.white : Colors.black87,
-              ),
+          final active = selected == e.key;
+          return ChoiceChip(
+            label: Text(e.value),
+            selected: active,
+            selectedColor: const Color(0xFF6366F1),
+            backgroundColor: const Color(0xFF1F2937),
+            labelStyle: TextStyle(
+              color: active ? Colors.white : Colors.white70,
+              fontWeight: FontWeight.w500,
             ),
+            onSelected: (_) => onChanged(e.key),
           );
         }).toList(),
       ),
@@ -182,126 +295,250 @@ class _FilterBar extends StatelessWidget {
   }
 }
 
-class _WorksList extends StatelessWidget {
+/* =======================================================
+   🔹 WORKS SLIVER (ANIMATED YEARS)
+   ======================================================= */
+
+class _WorksSliver extends StatelessWidget {
   final Map<String, List<WorkItem>> grouped;
   final String selectedType;
+  final Map<String, bool> expandedYears;
+  final ValueChanged<String> onToggleYear;
 
-  const _WorksList({
+  const _WorksSliver({
     required this.grouped,
     required this.selectedType,
+    required this.expandedYears,
+    required this.onToggleYear,
   });
 
   @override
   Widget build(BuildContext context) {
+    final Map<String, List<WorkItem>> byYear = {};
+
     final visible = selectedType == 'all'
         ? grouped
         : {selectedType: grouped[selectedType] ?? []};
 
-    final allWorks = <WorkItem>[];
-    visible.forEach((_, works) => allWorks.addAll(works));
-
-    if (allWorks.isEmpty) {
-      return const Center(child: Text('No works found'));
-    }
-
-    final byYear = <String, List<WorkItem>>{};
-
-    for (final w in allWorks) {
-      final year = w.year ?? 'Unknown Year';
-      byYear.putIfAbsent(year, () => []).add(w);
-    }
+    visible.forEach((_, works) {
+      for (final w in works) {
+        final year = (w.year != null && w.year!.trim().isNotEmpty)
+            ? w.year!
+            : 'Unknown Year';
+        byYear.putIfAbsent(year, () => []).add(w);
+      }
+    });
 
     final years = byYear.keys.toList()
-      ..sort((a, b) => b.compareTo(a));
+      ..sort((a, b) {
+        if (a == 'Unknown Year') return 1;
+        if (b == 'Unknown Year') return -1;
+        return b.compareTo(a);
+      });
 
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: years.map((year) {
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              child: Text(year,
-                  style: const TextStyle(
-                      fontSize: 18, fontWeight: FontWeight.bold)),
+    return SliverList(
+      delegate: SliverChildBuilderDelegate(
+        (context, index) {
+          final year = years[index];
+          final works = byYear[year]!;
+          final expanded = expandedYears[year] ?? true;
+
+          return Padding(
+            padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                GestureDetector(
+                  onTap: () => onToggleYear(year),
+                  child: Row(
+                    children: [
+                      Text(
+                        year,
+                        style: const TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                      const Spacer(),
+                      AnimatedRotation(
+                        turns: expanded ? 0.0 : 0.5,
+                        duration: const Duration(milliseconds: 250),
+                        child: const Icon(
+                          Icons.expand_more,
+                          color: Colors.white70,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const Divider(color: Colors.white24),
+                AnimatedCrossFade(
+                  duration: const Duration(milliseconds: 300),
+                  crossFadeState: expanded
+                      ? CrossFadeState.showFirst
+                      : CrossFadeState.showSecond,
+                  firstChild: Column(
+                    children: works.map((w) => _WorkCard(w)).toList(),
+                  ),
+                  secondChild: const SizedBox.shrink(),
+                ),
+              ],
             ),
-            const Divider(),
-            ...byYear[year]!.map((work) => _WorkCard(work)),
-            const SizedBox(height: 20),
-          ],
-        );
-      }).toList(),
+          );
+        },
+        childCount: years.length,
+      ),
     );
   }
 }
+
+/* =======================================================
+   🔹 WORK CARD (GLASS / HIGH TECH)
+   ======================================================= */
 
 class _WorkCard extends StatelessWidget {
   final WorkItem work;
   const _WorkCard(this.work);
 
+  Color _typeColor(String type) {
+    switch (type) {
+      case 'journal-article':
+        return const Color(0xFF6366F1);
+      case 'conference-paper':
+        return const Color(0xFF22D3EE);
+      case 'patent':
+        return const Color(0xFF4ADE80);
+      case 'book':
+        return const Color(0xFFA78BFA);
+      case 'book-chapter':
+        return const Color(0xFFFBBF24);
+      case 'design':
+        return const Color(0xFF38BDF8);
+      default:
+        return Colors.grey;
+    }
+  }
+
+  String _typeLabel(String type) {
+    switch (type) {
+      case 'journal-article':
+        return 'JOURNAL';
+      case 'conference-paper':
+        return 'CONFERENCE';
+      case 'patent':
+        return 'PATENT';
+      case 'book':
+        return 'BOOK';
+      case 'book-chapter':
+        return 'BOOK CHAPTER';
+      case 'design':
+        return 'DESIGN';
+      default:
+        return type.toUpperCase();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Card(
-      elevation: 0,
-      margin: const EdgeInsets.symmetric(vertical: 8),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(8),
-        side: BorderSide(color: Colors.grey.shade200),
+    final accent = _typeColor(work.type);
+
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 14),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(22),
+        gradient: const LinearGradient(
+          colors: [Color(0xFF111827), Color(0xFF020617)],
+        ),
+        border: Border.all(color: accent.withOpacity(0.35)),
+        boxShadow: [
+          BoxShadow(
+            color: accent.withOpacity(0.25),
+            blurRadius: 20,
+            offset: const Offset(0, 12),
+          ),
+        ],
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(work.title,
-                style: const TextStyle(
-                    fontSize: 15, fontWeight: FontWeight.w600, color: Colors.black87)),
-            const SizedBox(height: 6),
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: Colors.blue.shade50,
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: Text(
-                    work.type.replaceAll('-', ' ').toUpperCase(),
-                    style: TextStyle(fontSize: 10, color: Colors.blue.shade800, fontWeight: FontWeight.bold),
+      padding: const EdgeInsets.all(22),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  work.title,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
                   ),
                 ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    [
-                      work.source,
-                      work.year,
-                    ].where((s) => s != null && s.isNotEmpty).join(' • '),
-                    style: const TextStyle(fontSize: 12, color: Colors.grey),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ],
-            ),
-            if (work.identifiers.isNotEmpty) ...[
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 8),
-                child: Divider(height: 1),
               ),
-              Wrap(
-                spacing: 12,
-                runSpacing: 4,
-                children: work.identifiers.entries.map(
-                  (e) => Text(
-                    '${e.key.toUpperCase()}: ${e.value}',
-                    style: TextStyle(fontSize: 11, color: Colors.blue.shade900),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: accent.withOpacity(0.18),
+                  borderRadius: BorderRadius.circular(18),
+                ),
+                child: Text(
+                  _typeLabel(work.type),
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    color: accent,
+                    letterSpacing: 0.6,
                   ),
-                ).toList(),
+                ),
               ),
             ],
-          ],
-        ),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            [
+              work.source,
+              work.year,
+            ].whereType<String>().join(' • '),
+            style: const TextStyle(color: Colors.white70, fontSize: 12),
+          ),
+          const SizedBox(height: 14),
+          ...work.identifiers.entries.map(
+            (e) => Container(
+              margin: const EdgeInsets.only(bottom: 8),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: accent.withOpacity(0.08),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Row(
+                children: [
+                  SizedBox(
+                    width: 110,
+                    child: Text(
+                      e.key.toUpperCase(),
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: accent,
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    child: SelectableText(
+                      e.value,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -113,7 +113,7 @@ class _PersonalInfoFormState extends State<PersonalInfoForm> {
             children: [
               Expanded(
                 child: DropdownButtonFormField<String>(
-                  value: _selectedDesignation,
+                  initialValue: _selectedDesignation,
                   decoration: const InputDecoration(labelText: 'Designation'),
                   items: AppConstants.designations.map((String value) {
                     return DropdownMenuItem<String>(
@@ -137,7 +137,7 @@ class _PersonalInfoFormState extends State<PersonalInfoForm> {
               const SizedBox(width: AppConstants.paddingMedium),
               Expanded(
                 child: DropdownButtonFormField<String>(
-                  value: _selectedDepartment,
+                  initialValue: _selectedDepartment,
                   decoration: const InputDecoration(labelText: 'Department'),
                   items: AppConstants.departments.map((String value) {
                     return DropdownMenuItem<String>(

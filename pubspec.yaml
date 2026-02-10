@@ -12,6 +12,14 @@ dependencies:
 
   cupertino_icons: ^1.0.8
 
+
+
+  # HTTP (for ORCID API)
+  http: ^1.2.0
+
+  
+  # Firebase Core
+
   firebase_core: ^3.8.1
   firebase_auth: ^5.3.3
   cloud_firestore: ^5.5.2
