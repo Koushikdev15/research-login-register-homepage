@@ -18,10 +18,10 @@ class FacultyLoginScreen extends StatefulWidget {
 
 class _FacultyLoginScreenState extends State<FacultyLoginScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _emailController = TextEditingController();
-  final _passwordController = TextEditingController();
+  final _emailController = TextEditingController(text: 'csecitchennai_researchfaculty45@gmail.com');
+  final _passwordController = TextEditingController(text: 'citchennai@CSE0151006');
   bool _obscurePassword = true;
-  bool _rememberMe = false;
+  bool _rememberMe = true;
 
   @override
   void dispose() {
