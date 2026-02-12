@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-
+import 'package:cloud_firestore/cloud_firestore.dart';
+import '../../providers/auth_provider.dart';
 import '../../providers/faculty_provider.dart';
 import '../../services/orcid_service.dart';
 
@@ -15,10 +16,8 @@ class _ResearchPageState extends State<ResearchPage> {
   bool _loading = true;
   String? _error;
 
-  Map<String, int> _counts = {};
   Map<String, List<WorkItem>> _grouped = {};
   String _selectedType = 'all';
-
   final Map<String, bool> _expandedYears = {};
 
   @override
@@ -40,11 +39,8 @@ class _ResearchPageState extends State<ResearchPage> {
     }
 
     try {
-      final counts = await OrcidService.fetchWorkCounts(orcidId);
       final grouped = await OrcidService.fetchGroupedWorks(orcidId);
-
       setState(() {
-        _counts = counts;
         _grouped = grouped;
         _loading = false;
       });
@@ -71,7 +67,6 @@ class _ResearchPageState extends State<ResearchPage> {
       body: CustomScrollView(
         slivers: [
           const SliverToBoxAdapter(child: _ResearchHeader()),
-          SliverToBoxAdapter(child: _CountsGrid(counts: _counts)),
           SliverToBoxAdapter(
             child: _FilterBar(
               selected: _selectedType,
@@ -83,9 +78,7 @@ class _ResearchPageState extends State<ResearchPage> {
             selectedType: _selectedType,
             expandedYears: _expandedYears,
             onToggleYear: (y) {
-              setState(() {
-                _expandedYears[y] = !(_expandedYears[y] ?? true);
-              });
+              _expandedYears[y] = !(_expandedYears[y] ?? true);
             },
           ),
         ],
@@ -95,7 +88,7 @@ class _ResearchPageState extends State<ResearchPage> {
 }
 
 /* =======================================================
-   🔹 HEADER (DARK / GLASS)
+   🔹 HEADER
    ======================================================= */
 
 class _ResearchHeader extends StatelessWidget {
@@ -104,7 +97,7 @@ class _ResearchHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(24, 56, 24, 36),
+      padding: const EdgeInsets.fromLTRB(28, 64, 28, 42),
       decoration: const BoxDecoration(
         gradient: LinearGradient(
           colors: [Color(0xFF111827), Color(0xFF1F2937)],
@@ -119,135 +112,17 @@ class _ResearchHeader extends StatelessWidget {
               color: Colors.white,
               fontSize: 28,
               fontWeight: FontWeight.bold,
-              letterSpacing: 0.5,
             ),
           ),
           SizedBox(height: 8),
           Text(
-            'Authoritative academic works synced from ORCID',
+            'Verification status shown for current year works',
             style: TextStyle(color: Colors.white70),
           ),
         ],
       ),
     );
   }
-}
-
-/* =======================================================
-   🔹 COUNTS GRID (GLASS METRICS)
-   ======================================================= */
-
-class _CountsGrid extends StatelessWidget {
-  final Map<String, int> counts;
-  const _CountsGrid({required this.counts});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final crossAxisCount = constraints.maxWidth > 1100 ? 7 : 3;
-
-          return GridView.count(
-            crossAxisCount: crossAxisCount,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            crossAxisSpacing: 14,
-            mainAxisSpacing: 14,
-            children: _items().map((e) {
-              return _MetricCard(
-                label: e.label,
-                value: counts[e.key] ?? 0,
-                icon: e.icon,
-                color: e.color,
-              );
-            }).toList(),
-          );
-        },
-      ),
-    );
-  }
-
-  List<_CountItem> _items() => [
-        _CountItem('total', 'Total', Icons.library_books, Color(0xFF6366F1)),
-        _CountItem('journal', 'Journals', Icons.article, Color(0xFF22D3EE)),
-        _CountItem('conference', 'Conferences', Icons.groups, Color(0xFF2DD4BF)),
-        _CountItem('bookChapter', 'Chapters', Icons.menu_book, Color(0xFFFBBF24)),
-        _CountItem('book', 'Books', Icons.book, Color(0xFFA78BFA)),
-        _CountItem('patent', 'Patents', Icons.gavel, Color(0xFF4ADE80)),
-        _CountItem('design', 'Designs', Icons.architecture, Color(0xFF38BDF8)),
-      ];
-}
-
-class _MetricCard extends StatelessWidget {
-  final String label;
-  final int value;
-  final IconData icon;
-  final Color color;
-
-  const _MetricCard({
-    required this.label,
-    required this.value,
-    required this.icon,
-    required this.color,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(22),
-        gradient: LinearGradient(
-          colors: [
-            color.withOpacity(0.25),
-            color.withOpacity(0.10),
-          ],
-        ),
-        border: Border.all(color: color.withOpacity(0.35)),
-        boxShadow: [
-          BoxShadow(
-            color: color.withOpacity(0.35),
-            blurRadius: 18,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon, color: color, size: 26),
-          const SizedBox(height: 12),
-          Text(
-            '$value',
-            style: const TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: const TextStyle(
-              color: Colors.white70,
-              fontSize: 12,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _CountItem {
-  final String key;
-  final String label;
-  final IconData icon;
-  final Color color;
-
-  _CountItem(this.key, this.label, this.icon, this.color);
 }
 
 /* =======================================================
@@ -273,7 +148,7 @@ class _FilterBar extends StatelessWidget {
     };
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Wrap(
         spacing: 10,
         children: filters.entries.map((e) {
@@ -281,12 +156,6 @@ class _FilterBar extends StatelessWidget {
           return ChoiceChip(
             label: Text(e.value),
             selected: active,
-            selectedColor: const Color(0xFF6366F1),
-            backgroundColor: const Color(0xFF1F2937),
-            labelStyle: TextStyle(
-              color: active ? Colors.white : Colors.white70,
-              fontWeight: FontWeight.w500,
-            ),
             onSelected: (_) => onChanged(e.key),
           );
         }).toList(),
@@ -296,7 +165,7 @@ class _FilterBar extends StatelessWidget {
 }
 
 /* =======================================================
-   🔹 WORKS SLIVER (ANIMATED YEARS)
+   🔹 WORKS SLIVER
    ======================================================= */
 
 class _WorksSliver extends StatelessWidget {
@@ -315,26 +184,18 @@ class _WorksSliver extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final Map<String, List<WorkItem>> byYear = {};
-
     final visible = selectedType == 'all'
         ? grouped
         : {selectedType: grouped[selectedType] ?? []};
 
     visible.forEach((_, works) {
       for (final w in works) {
-        final year = (w.year != null && w.year!.trim().isNotEmpty)
-            ? w.year!
-            : 'Unknown Year';
+        final year = w.year ?? 'Unknown';
         byYear.putIfAbsent(year, () => []).add(w);
       }
     });
 
-    final years = byYear.keys.toList()
-      ..sort((a, b) {
-        if (a == 'Unknown Year') return 1;
-        if (b == 'Unknown Year') return -1;
-        return b.compareTo(a);
-      });
+    final years = byYear.keys.toList()..sort((a, b) => b.compareTo(a));
 
     return SliverList(
       delegate: SliverChildBuilderDelegate(
@@ -344,9 +205,8 @@ class _WorksSliver extends StatelessWidget {
           final expanded = expandedYears[year] ?? true;
 
           return Padding(
-            padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
+            padding: const EdgeInsets.fromLTRB(24, 32, 24, 0),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 GestureDetector(
                   onTap: () => onToggleYear(year),
@@ -361,28 +221,20 @@ class _WorksSliver extends StatelessWidget {
                         ),
                       ),
                       const Spacer(),
-                      AnimatedRotation(
-                        turns: expanded ? 0.0 : 0.5,
-                        duration: const Duration(milliseconds: 250),
-                        child: const Icon(
-                          Icons.expand_more,
-                          color: Colors.white70,
-                        ),
+                      Icon(
+                        expanded ? Icons.expand_less : Icons.expand_more,
+                        color: Colors.white70,
                       ),
                     ],
                   ),
                 ),
-                const Divider(color: Colors.white24),
-                AnimatedCrossFade(
-                  duration: const Duration(milliseconds: 300),
-                  crossFadeState: expanded
-                      ? CrossFadeState.showFirst
-                      : CrossFadeState.showSecond,
-                  firstChild: Column(
-                    children: works.map((w) => _WorkCard(w)).toList(),
-                  ),
-                  secondChild: const SizedBox.shrink(),
-                ),
+                const Padding(
+  padding: EdgeInsets.symmetric(vertical: 8),
+  child: Divider(color: Colors.white24),
+),
+
+                if (expanded)
+                  ...works.map((w) => _WorkCardWithBadges(work: w)),
               ],
             ),
           );
@@ -394,151 +246,195 @@ class _WorksSliver extends StatelessWidget {
 }
 
 /* =======================================================
-   🔹 WORK CARD (GLASS / HIGH TECH)
+   🔹 WORK CARD WITH BADGES (FACULTY VIEW)
    ======================================================= */
 
-class _WorkCard extends StatelessWidget {
+class _WorkCardWithBadges extends StatelessWidget {
   final WorkItem work;
-  const _WorkCard(this.work);
+  const _WorkCardWithBadges({required this.work});
 
-  Color _typeColor(String type) {
-    switch (type) {
-      case 'journal-article':
-        return const Color(0xFF6366F1);
-      case 'conference-paper':
-        return const Color(0xFF22D3EE);
-      case 'patent':
-        return const Color(0xFF4ADE80);
-      case 'book':
-        return const Color(0xFFA78BFA);
-      case 'book-chapter':
-        return const Color(0xFFFBBF24);
-      case 'design':
-        return const Color(0xFF38BDF8);
-      default:
-        return Colors.grey;
-    }
-  }
-
-  String _typeLabel(String type) {
-    switch (type) {
-      case 'journal-article':
-        return 'JOURNAL';
-      case 'conference-paper':
-        return 'CONFERENCE';
-      case 'patent':
-        return 'PATENT';
-      case 'book':
-        return 'BOOK';
-      case 'book-chapter':
-        return 'BOOK CHAPTER';
-      case 'design':
-        return 'DESIGN';
-      default:
-        return type.toUpperCase();
-    }
-  }
+  bool get _isCurrentYear =>
+      work.year == DateTime.now().year.toString();
 
   @override
   Widget build(BuildContext context) {
-    final accent = _typeColor(work.type);
+    final authProvider = context.read<AuthProvider>();
+    final String? uid = authProvider.currentUserId;
 
     return Container(
-      margin: const EdgeInsets.symmetric(vertical: 14),
+      margin: const EdgeInsets.symmetric(vertical: 16),
+      padding: const EdgeInsets.symmetric(
+        horizontal: 22,
+        vertical: 22,
+      ),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(22),
         gradient: const LinearGradient(
-          colors: [Color(0xFF111827), Color(0xFF020617)],
+          colors: [Color(0xFF0F172A), Color(0xFF020617)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
         ),
-        border: Border.all(color: accent.withOpacity(0.35)),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.white12),
         boxShadow: [
           BoxShadow(
-            color: accent.withOpacity(0.25),
-            blurRadius: 20,
-            offset: const Offset(0, 12),
+            color: Colors.black.withOpacity(0.45),
+            blurRadius: 14,
+            offset: const Offset(0, 8),
           ),
         ],
       ),
-      padding: const EdgeInsets.all(22),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          /// 🔹 TITLE
+          Text(
+            work.title,
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w700,
+              fontSize: 16,
+              height: 1.4,
+            ),
+          ),
+
+          const SizedBox(height: 10),
+
+          /// 🔹 META LINE
           Row(
             children: [
               Expanded(
                 child: Text(
-                  work.title,
+                  '${work.source ?? ''}',
                   style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white,
+                    color: Colors.white70,
+                    fontSize: 13,
                   ),
                 ),
               ),
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: accent.withOpacity(0.18),
-                  borderRadius: BorderRadius.circular(18),
-                ),
-                child: Text(
-                  _typeLabel(work.type),
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
-                    color: accent,
-                    letterSpacing: 0.6,
+              if (work.year != null)
+                Text(
+                  work.year!,
+                  style: const TextStyle(
+                    color: Colors.white54,
+                    fontSize: 13,
                   ),
                 ),
-              ),
             ],
           ),
-          const SizedBox(height: 10),
-          Text(
-            [
-              work.source,
-              work.year,
-            ].whereType<String>().join(' • '),
-            style: const TextStyle(color: Colors.white70, fontSize: 12),
-          ),
-          const SizedBox(height: 14),
-          ...work.identifiers.entries.map(
-            (e) => Container(
-              margin: const EdgeInsets.only(bottom: 8),
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              decoration: BoxDecoration(
-                color: accent.withOpacity(0.08),
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: Row(
-                children: [
-                  SizedBox(
-                    width: 110,
-                    child: Text(
-                      e.key.toUpperCase(),
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        color: accent,
-                      ),
+
+          const SizedBox(height: 18),
+
+          /// 🔹 BADGES
+          if (_isCurrentYear && uid != null)
+            StreamBuilder<QuerySnapshot>(
+              stream: FirebaseFirestore.instance
+                  .collection('research_verifications')
+                  .where('facultyId', isEqualTo: uid)
+                  .where('putCode', isEqualTo: work.putCode)
+                  .limit(1)
+                  .snapshots(),
+              builder: (context, snapshot) {
+                if (!snapshot.hasData ||
+                    snapshot.data!.docs.isEmpty) {
+                  return const _Badge(text: 'PENDING');
+                }
+
+                final data = snapshot.data!.docs.first.data()
+                    as Map<String, dynamic>;
+
+                final String? decision =
+                    data['verificationDecision'];
+
+                return Wrap(
+                  spacing: 10,
+                  runSpacing: 10,
+                  children: [
+                    if (data['isScopus'] == true)
+                      const _Badge(text: 'SCOPUS'),
+                    if (data['isSci'] == true)
+                      const _Badge(text: 'SCI'),
+                    if (data['isIsbnVerified'] == true)
+                      const _Badge(text: 'ISBN'),
+                    _Badge(
+                      text: decision ??
+                          data['verificationStatus'] ??
+                          'PENDING',
+                      highlight:
+                          decision == 'VERIFIED',
                     ),
-                  ),
-                  Expanded(
-                    child: SelectableText(
-                      e.value,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+                  ],
+                );
+              },
             ),
-          ),
         ],
+      ),
+    );
+  }
+}
+
+
+
+class _Badge extends StatelessWidget {
+  final String text;
+  final bool highlight;
+
+  const _Badge({required this.text, this.highlight = false});
+
+  @override
+  Widget build(BuildContext context) {
+    Color bgColor;
+    Color borderColor;
+
+    switch (text) {
+      case 'VERIFIED':
+        bgColor = const Color(0xFF14532D);
+        borderColor = const Color(0xFF22C55E);
+        break;
+      case 'SCOPUS':
+        bgColor = const Color(0xFF1E3A8A);
+        borderColor = const Color(0xFF3B82F6);
+        break;
+      case 'SCI':
+        bgColor = const Color(0xFF312E81);
+        borderColor = const Color(0xFF6366F1);
+        break;
+      case 'ISBN':
+        bgColor = const Color(0xFF064E3B);
+        borderColor = const Color(0xFF14B8A6);
+        break;
+      case 'NOT_VERIFIED':
+        bgColor = const Color(0xFF7F1D1D);
+        borderColor = const Color(0xFFEF4444);
+        break;
+      default: // PENDING
+        bgColor = const Color(0xFF374151);
+        borderColor = const Color(0xFF6B7280);
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(30),
+        border: Border.all(color: borderColor, width: 1.2),
+        boxShadow: highlight
+            ? [
+                BoxShadow(
+                  color: borderColor.withOpacity(0.5),
+                  blurRadius: 12,
+                  spreadRadius: 1,
+                )
+              ]
+            : [],
+      ),
+      child: Text(
+        text,
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+          letterSpacing: 0.4,
+        ),
       ),
     );
   }

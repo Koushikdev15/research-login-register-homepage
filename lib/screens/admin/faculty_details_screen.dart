@@ -323,10 +323,7 @@ class _FacultyCard extends StatelessWidget {
                       );
                     },
                   ),
-                  _ActionButton(
-                    label: 'Research/Patent',
-                    onPressed: () => _showComingSoon(context, 'Research/Patent'),
-                  ),
+                 
                   _ActionButton(
                     label: 'FDB/Certifications',
                     onPressed: () => _showComingSoon(context, 'FDB/Certifications'),

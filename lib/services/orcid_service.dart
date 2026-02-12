@@ -31,27 +31,31 @@ class WorkItem {
 }
 
 /// ======================================================
-/// 🔹 ORCID SERVICE (CLAIMS ONLY)
+/// 🔹 ORCID SERVICE (CLAIMS ONLY — LOCKED)
 /// ======================================================
 class OrcidService {
   static const String _baseUrl = 'https://pub.orcid.org/v3.0';
+
+  /// 🔒 REQUIRED headers (ORCID enforces User-Agent)
   static const Map<String, String> _headers = {
     'Accept': 'application/vnd.orcid+json',
+    'User-Agent': 'FacultyResearchApp/1.0 (mailto:admin@yourcollege.edu)',
   };
 
-  // -------------------------------
+  // --------------------------------------------------
   // SAFE HELPERS
-  // -------------------------------
+  // --------------------------------------------------
   static String? _s(dynamic v) =>
       (v is String && v.trim().isNotEmpty) ? v : null;
 
   static List _l(dynamic v) => v is List ? v : [];
 
-  // -------------------------------
-  // PARSE SINGLE WORK
-  // -------------------------------
+  // --------------------------------------------------
+  // PARSE SINGLE ORCID WORK (GROUP SUMMARY)
+  // --------------------------------------------------
   static WorkItem? _parseWork(List summaries) {
     if (summaries.isEmpty) return null;
+
     final primary = summaries.first;
 
     final String title =
@@ -78,13 +82,12 @@ class OrcidService {
     final Map<String, String> identifiers = {};
 
     for (final summary in summaries) {
-      if (summary['external-ids'] != null && summary['external-ids']['external-id'] != null) {
-        for (final id in _l(summary['external-ids']['external-id'])) {
-          final type = _s(id['external-id-type']);
-          final value = _s(id['external-id-value']);
-          if (type != null && value != null) {
-            identifiers[type] = value;
-          }
+      for (final id
+          in _l(summary['external-ids']?['external-id'])) {
+        final idType = _s(id['external-id-type']);
+        final idValue = _s(id['external-id-value']);
+        if (idType != null && idValue != null) {
+          identifiers[idType] = idValue;
         }
       }
     }
@@ -114,19 +117,19 @@ class OrcidService {
         headers: _headers,
       );
 
-      if (res.statusCode != 200) return {};
+      if (res.statusCode != 200) {
+        return {};
+      }
 
       final data = json.decode(res.body);
       final Map<String, List<WorkItem>> grouped = {};
 
-      if (data['group'] != null) {
-        for (final group in _l(data['group'])) {
-          final summaries = _l(group['work-summary']);
-          final item = _parseWork(summaries);
-          if (item == null) continue;
+      for (final group in _l(data['group'])) {
+        final summaries = _l(group['work-summary']);
+        final item = _parseWork(summaries);
+        if (item == null) continue;
 
-          grouped.putIfAbsent(item.type, () => []).add(item);
-        }
+        grouped.putIfAbsent(item.type, () => []).add(item);
       }
 
       return grouped;
@@ -136,13 +139,11 @@ class OrcidService {
   }
 
   // ======================================================
-  // 🔹 FETCH COUNTS
+  // 🔹 CALCULATE COUNTS (NO EXTRA ORCID CALL)
   // ======================================================
-  static Future<Map<String, int>> fetchWorkCounts(
-    String orcidId,
-  ) async {
-    final grouped = await fetchGroupedWorks(orcidId);
-
+  static Map<String, int> calculateCounts(
+    Map<String, List<WorkItem>> grouped,
+  ) {
     int journal = 0,
         conference = 0,
         bookChapter = 0,

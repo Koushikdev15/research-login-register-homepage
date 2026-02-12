@@ -5,6 +5,10 @@ import '../../theme/app_colors.dart';
 import '../../theme/app_text_styles.dart';
 import 'faculty_details_screen.dart';
 import '../../providers/admin_provider.dart';
+import 'admin_home_screen.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 
 class AdminLoginScreen extends StatefulWidget {
   const AdminLoginScreen({super.key});
@@ -28,40 +32,36 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
     super.dispose();
   }
 
-  void _handleLogin() async {
-    if (_formKey.currentState!.validate()) {
-      setState(() {
-        _isLoading = true;
-        _errorMessage = null;
-      });
+void _handleLogin() async {
+  if (!_formKey.currentState!.validate()) return;
 
-      // Hardcoded credentials as per original file
-      const adminUsername = 'csecitchennai_researchfaculty45';
-      const adminPassword = 'citchennai@CSE0151006';
+  setState(() {
+    _isLoading = true;
+    _errorMessage = null;
+  });
 
-      await Future.delayed(const Duration(seconds: 1)); // Mock delay
+  try {
+    await FirebaseAuth.instance.signInWithEmailAndPassword(
+      email: _usernameController.text.trim(),
+      password: _passwordController.text.trim(),
+    );
 
-      if (_usernameController.text == adminUsername &&
-          _passwordController.text == adminPassword) {
-        if (!mounted) return;
-        
-        // Start fetching data in background
-        Provider.of<AdminProvider>(context, listen: false).fetchAllFaculty();
-        
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const FacultyDetailsScreen()),
-        );
-      } else {
-        if (!mounted) return;
-        setState(() {
-          _errorMessage = 'Invalid username or password';
-          _isLoading = false;
-          _passwordController.clear();
-        });
-      }
-    }
+    if (!mounted) return;
+
+    Provider.of<AdminProvider>(context, listen: false).fetchAllFaculty();
+
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (_) => const AdminHomeScreen()),
+    );
+  } on FirebaseAuthException catch (e) {
+    setState(() {
+      _errorMessage = e.message ?? 'Login failed';
+      _isLoading = false;
+    });
   }
+}
+
 
   @override
   Widget build(BuildContext context) {
