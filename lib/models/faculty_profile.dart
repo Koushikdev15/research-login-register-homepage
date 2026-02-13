@@ -53,12 +53,12 @@ class FacultyProfile {
       } catch (e) {
         // Fallback to manually entered CIT Experience if date parsing fails
         if (citExperience != null) {
-          total += citExperience!.yearsInCIT;
+          total += citExperience!.years;
         }
       }
     } else if (citExperience != null) {
       // Fallback if no date is present
-      total += citExperience!.yearsInCIT;
+      total += citExperience!.years;
     }
     
     return total;
@@ -80,9 +80,9 @@ class FacultyProfile {
           return (difference / 365).floor();
         }
       } catch (e) {
-        return citExperience?.yearsInCIT ?? 0;
+        return citExperience?.years ?? 0;
       }
     }
-    return citExperience?.yearsInCIT ?? 0;
+    return citExperience?.years ?? 0;
   }
 }

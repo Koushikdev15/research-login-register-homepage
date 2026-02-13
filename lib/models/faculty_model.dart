@@ -128,21 +128,64 @@ class WorkExperience {
 }
 
 class CITExperience {
-  final int yearsInCIT;
+  final int years;
+  final int months;
 
-  CITExperience({required this.yearsInCIT});
+  CITExperience({required this.years, required this.months});
+
+  // Calculate experience from date of joining
+  factory CITExperience.fromDateOfJoining(String dateOfJoining) {
+    try {
+      // Parse date in DD/MM/YYYY format
+      final parts = dateOfJoining.split('/');
+      if (parts.length != 3) {
+        return CITExperience(years: 0, months: 0);
+      }
+      
+      final day = int.parse(parts[0]);
+      final month = int.parse(parts[1]);
+      final year = int.parse(parts[2]);
+      
+      final joiningDate = DateTime(year, month, day);
+      final now = DateTime.now();
+      
+      int totalMonths = (now.year - joiningDate.year) * 12 + (now.month - joiningDate.month);
+      
+      // Adjust if current day is before joining day in the month
+      if (now.day < joiningDate.day) {
+        totalMonths--;
+      }
+      
+      final years = totalMonths ~/ 12;
+      final months = totalMonths % 12;
+      
+      return CITExperience(years: years, months: months);
+    } catch (e) {
+      return CITExperience(years: 0, months: 0);
+    }
+  }
 
   factory CITExperience.fromFirestore(DocumentSnapshot doc) {
     Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
     return CITExperience(
-      yearsInCIT: data['yearsInCIT'] ?? 0,
+      years: data['years'] ?? data['yearsInCIT'] ?? 0, // Support old format
+      months: data['months'] ?? 0,
     );
   }
 
   Map<String, dynamic> toMap() {
     return {
-      'yearsInCIT': yearsInCIT,
+      'years': years,
+      'months': months,
     };
+  }
+
+  // Get formatted string like "2 years, 3 months"
+  String get formatted {
+    if (years == 0 && months == 0) return '0 months';
+    if (years == 0) return '$months ${months == 1 ? 'month' : 'months'}';
+    if (months == 0) return '$years ${years == 1 ? 'year' : 'years'}';
+    return '$years ${years == 1 ? 'year' : 'years'}, $months ${months == 1 ? 'month' : 'months'}';
   }
 }
 

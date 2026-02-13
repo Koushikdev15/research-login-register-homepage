@@ -11,25 +11,35 @@ class StorageService {
   // Upload profile picture
   Future<String> uploadProfilePicture(String userId, XFile imageFile) async {
     try {
+      print('Starting profile picture upload for user: $userId');
+      
       // Create reference to storage location
       // Use jpeg extension for consistency, or extract from file name
       Reference ref = _storage.ref().child('profilePictures/$userId/${DateTime.now().millisecondsSinceEpoch}.jpg');
+      print('Storage reference created: ${ref.fullPath}');
 
       // Upload file using data (works on Web and Mobile)
       Uint8List data = await imageFile.readAsBytes();
+      print('Image data read: ${data.length} bytes');
+      
       UploadTask uploadTask = ref.putData(data, SettableMetadata(contentType: 'image/jpeg'));
+      print('Upload task started...');
 
       // Wait for upload to complete
       TaskSnapshot snapshot = await uploadTask;
+      print('Upload completed successfully');
 
       // Get download URL
       String downloadUrl = await snapshot.ref.getDownloadURL();
+      print('Download URL obtained: $downloadUrl');
 
       // Update Firestore with new profile picture URL
       await _updateProfilePictureUrl(userId, downloadUrl);
+      print('Firestore updated with new profile picture URL');
 
       return downloadUrl;
     } catch (e) {
+      print('Error uploading profile picture: $e');
       throw 'Error uploading profile picture: $e';
     }
   }
@@ -37,14 +47,23 @@ class StorageService {
   // Pick image from gallery
   Future<XFile?> pickImageFromGallery() async {
     try {
+      print('Opening image picker...');
       final XFile? image = await _picker.pickImage(
         source: ImageSource.gallery,
         maxWidth: 1024,
         maxHeight: 1024,
         imageQuality: 85,
       );
+      
+      if (image != null) {
+        print('Image selected: ${image.name}, Size: ${await image.length()} bytes');
+      } else {
+        print('No image selected');
+      }
+      
       return image;
     } catch (e) {
+      print('Error picking image from gallery: $e');
       throw 'Error picking image from gallery: $e';
     }
   }

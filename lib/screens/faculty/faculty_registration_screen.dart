@@ -240,12 +240,6 @@ class _FacultyRegistrationScreenState extends State<FacultyRegistrationScreen> {
   }
 
   Future<void> _registerFaculty() async {
-    // Validate CIT Experience
-    if (_citExperienceController.text.isEmpty) {
-      _showErrorSnackBar('Please enter years in CIT');
-      return;
-    }
-
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final facultyProvider = Provider.of<FacultyProvider>(context, listen: false);
 
@@ -284,8 +278,9 @@ class _FacultyRegistrationScreenState extends State<FacultyRegistrationScreen> {
         googleScholarId: _researchIDsData['googleScholarId'],
       );
 
-      final citExperience = CITExperience(
-        yearsInCIT: int.tryParse(_citExperienceController.text.trim()) ?? 0,
+      // Calculate CIT experience from date of joining
+      final citExperience = CITExperience.fromDateOfJoining(
+        _personalInfoData['dateOfJoining']!,
       );
 
       // 3. Save to Firestore
@@ -503,14 +498,58 @@ class _FacultyRegistrationScreenState extends State<FacultyRegistrationScreen> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  // CIT Experience
-                                  TextFormField(
-                                    controller: _citExperienceController,
-                                    decoration: const InputDecoration(
-                                      labelText: 'Years in CIT',
-                                      prefixIcon: Icon(Icons.business),
+                                  // CIT Experience (Auto-calculated)
+                                  Container(
+                                    padding: const EdgeInsets.all(16),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.offWhite,
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(color: AppColors.academicBlue.withOpacity(0.3)),
                                     ),
-                                    keyboardType: TextInputType.number,
+                                    child: Row(
+                                      children: [
+                                        const Icon(Icons.business, color: AppColors.academicBlue),
+                                        const SizedBox(width: 12),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              const Text(
+                                                'Experience in CIT',
+                                                style: TextStyle(
+                                                  fontSize: 12,
+                                                  color: AppColors.mediumGray,
+                                                  fontWeight: FontWeight.w500,
+                                                ),
+                                              ),
+                                              const SizedBox(height: 4),
+                                              Text(
+                                                _personalInfoData['dateOfJoining'] != null && _personalInfoData['dateOfJoining']!.isNotEmpty
+                                                    ? CITExperience.fromDateOfJoining(_personalInfoData['dateOfJoining']!).formatted
+                                                    : 'Please complete Personal Info step first',
+                                                style: TextStyle(
+                                                  fontSize: 16,
+                                                  fontWeight: FontWeight.w600,
+                                                  color: _personalInfoData['dateOfJoining'] != null && _personalInfoData['dateOfJoining']!.isNotEmpty
+                                                      ? AppColors.universityNavy
+                                                      : AppColors.mediumGray,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        const Icon(Icons.info_outline, color: AppColors.mediumGray, size: 20),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  const Text(
+                                    'Automatically calculated from your Date of Joining',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: AppColors.mediumGray,
+                                      fontStyle: FontStyle.italic,
+                                    ),
                                   ),
                                   const SizedBox(height: 32),
                                   const Divider(),

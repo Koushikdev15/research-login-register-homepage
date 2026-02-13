@@ -6,6 +6,7 @@ import '../../utils/constants.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_text_styles.dart';
 import 'admin_general_info_screen.dart';
+import 'admin_research_screen.dart';
 import '../../services/pdf_service.dart';
 
 class FacultyDetailsScreen extends StatefulWidget {
@@ -319,6 +320,19 @@ class _FacultyCard extends StatelessWidget {
                         MaterialPageRoute(
                           builder: (context) =>
                               AdminGeneralInfoScreen(faculty: faculty),
+                        ),
+                      );
+                    },
+                  ),
+                  
+                  _ActionButton(
+                    label: 'Research',
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) =>
+                              AdminResearchScreen(faculty: faculty),
                         ),
                       );
                     },

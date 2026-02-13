@@ -36,28 +36,63 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _updateProfilePicture() async {
     try {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Opening image picker...'), duration: Duration(seconds: 1)),
+        );
+      }
+
       final XFile? image = await _storageService.pickImageFromGallery();
-      if (image != null) {
+      
+      if (image == null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('No image selected'), backgroundColor: AppColors.mediumGray),
+          );
+        }
+        return;
+      }
+
+      if (mounted) {
         final authProvider = Provider.of<AuthProvider>(context, listen: false);
-        final userId = authProvider.currentUserId!;
+        final userId = authProvider.currentUserId;
+        
+        if (userId == null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Error: User not logged in'), backgroundColor: AppColors.errorRed),
+          );
+          return;
+        }
         
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Uploading profile picture...')),
+          const SnackBar(content: Text('Uploading profile picture...'), duration: Duration(seconds: 2)),
         );
 
-        await _storageService.uploadProfilePicture(userId, image);
+        final downloadUrl = await _storageService.uploadProfilePicture(userId, image);
+        
+        print('Profile picture uploaded successfully: $downloadUrl');
+        
         await authProvider.refreshUserData();
 
         if (mounted) {
-           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Profile picture updated!'), backgroundColor: AppColors.successGreen),
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Profile picture updated successfully!'), 
+              backgroundColor: AppColors.successGreen,
+              duration: Duration(seconds: 2),
+            ),
           );
         }
       }
     } catch (e) {
+      print('Error updating profile picture: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: AppColors.errorRed),
+          SnackBar(
+            content: Text('Error: ${e.toString()}'), 
+            backgroundColor: AppColors.errorRed,
+            duration: const Duration(seconds: 4),
+          ),
         );
       }
     }
@@ -68,6 +103,10 @@ class _HomePageState extends State<HomePage> {
     final authProvider = Provider.of<AuthProvider>(context);
     final facultyProvider = Provider.of<FacultyProvider>(context);
     final user = authProvider.userModel;
+
+    // Debug: Print user profile picture URL
+    print('User profile picture URL: ${user?.profilePictureURL}');
+    print('User ID: ${authProvider.currentUserId}');
 
     if (facultyProvider.isLoading) {
       return const Center(child: CircularProgressIndicator());
@@ -253,7 +292,7 @@ class _HomePageState extends State<HomePage> {
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Text(
-                '${provider.citExperience!.yearsInCIT} Years',
+                provider.citExperience!.formatted,
                 style: const TextStyle(color: AppColors.academicBlue, fontWeight: FontWeight.bold),
               ),
             ),
