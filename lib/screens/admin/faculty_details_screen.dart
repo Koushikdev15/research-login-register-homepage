@@ -6,8 +6,9 @@ import '../../utils/constants.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_text_styles.dart';
 import 'admin_general_info_screen.dart';
-import 'admin_research_screen.dart';
 import '../../services/pdf_service.dart';
+import '../faculty/fdb_view_page.dart';
+
 
 class FacultyDetailsScreen extends StatefulWidget {
   const FacultyDetailsScreen({super.key});
@@ -324,24 +325,21 @@ class _FacultyCard extends StatelessWidget {
                       );
                     },
                   ),
-                  
-                  _ActionButton(
-                    label: 'Research',
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) =>
-                              AdminResearchScreen(faculty: faculty),
-                        ),
-                      );
-                    },
-                  ),
                  
                   _ActionButton(
-                    label: 'FDB/Certifications',
-                    onPressed: () => _showComingSoon(context, 'FDB/Certifications'),
-                  ),
+  label: 'FDB/Certifications',
+  onPressed: () {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => FdbViewPage(
+          overrideEmail: faculty.userModel.email,
+        ),
+      ),
+    );
+  },
+),
+
                   const SizedBox(height: 16),
                   SizedBox(
                     width: double.infinity,

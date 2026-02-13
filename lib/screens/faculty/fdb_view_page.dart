@@ -7,7 +7,13 @@ import 'package:pdf/pdf.dart';
 import 'package:printing/printing.dart';
 
 class FdbViewPage extends StatefulWidget {
-  const FdbViewPage({super.key});
+  final String? overrideEmail;
+
+  const FdbViewPage({
+    super.key,
+    this.overrideEmail,
+  });
+
 
   @override
   State<FdbViewPage> createState() => _FdbViewPageState();
@@ -286,7 +292,11 @@ await Printing.layoutPdf(
           return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
             stream: FirebaseFirestore.instance
                 .collection('fdb_datum')
-                .where('email', isEqualTo: user!.email)
+                .where(
+  'email',
+  isEqualTo: widget.overrideEmail ?? user!.email,
+)
+
                 .snapshots(),
             builder: (context, snapshot) {
 
