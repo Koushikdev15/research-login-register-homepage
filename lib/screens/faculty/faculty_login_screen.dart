@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../../providers/auth_provider.dart';
 import '../../utils/constants.dart';
@@ -9,6 +10,7 @@ import '../../theme/app_colors.dart';
 import '../../theme/app_text_styles.dart';
 
 import 'faculty_dashboard.dart';
+import 'faculty_registration_screen.dart';
 
 class FacultyLoginScreen extends StatefulWidget {
   const FacultyLoginScreen({super.key});
@@ -23,7 +25,6 @@ class _FacultyLoginScreenState extends State<FacultyLoginScreen> {
   final _passwordController = TextEditingController();
 
   bool _obscurePassword = true;
-  bool _rememberMe = true;
 
   @override
   void dispose() {
@@ -50,9 +51,9 @@ class _FacultyLoginScreenState extends State<FacultyLoginScreen> {
         MaterialPageRoute(builder: (_) => const FacultyDashboard()),
       );
     } else {
-      // ⭐ Improved message
       _showErrorSnackBar(
-        'This faculty account uses Google Sign-In. Please continue with Google.',
+        authProvider.errorMessage ??
+            'This faculty account may use Google Sign-In.',
       );
     }
   }
@@ -66,13 +67,43 @@ class _FacultyLoginScreenState extends State<FacultyLoginScreen> {
 
     if (!mounted) return;
 
-    if (success) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const FacultyDashboard()),
-      );
-    } else {
-      _showErrorSnackBar(authProvider.errorMessage ?? AppConstants.genericError);
+    if (!success) {
+      _showErrorSnackBar(
+          authProvider.errorMessage ?? AppConstants.genericError);
+      return;
+    }
+
+    final String? uid = authProvider.currentUserId;
+
+    if (uid == null) {
+      _showErrorSnackBar('Authentication failed. Try again.');
+      return;
+    }
+
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(uid)
+          .collection('personalInfo')
+          .doc('info')
+          .get();
+
+      if (!mounted) return;
+
+      if (!doc.exists) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+              builder: (_) => const FacultyRegistrationScreen()),
+        );
+      } else {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const FacultyDashboard()),
+        );
+      }
+    } catch (e) {
+      _showErrorSnackBar('Error verifying profile. Please try again.');
     }
   }
 
@@ -88,107 +119,144 @@ class _FacultyLoginScreenState extends State<FacultyLoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final bool isDesktop = MediaQuery.of(context).size.width > 600;
+
     return Scaffold(
       backgroundColor: AppColors.offWhite,
-      body: Center(
+      body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 480),
-            child: Card(
-              child: Padding(
-                padding: const EdgeInsets.all(40),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Center(
-                      child: Icon(Icons.school,
-                          size: 56, color: AppColors.academicBlue),
-                    ),
-                    const SizedBox(height: 16),
-
-                    Text(
-                      'Faculty Login',
-                      style: AppTextStyles.h2,
-                      textAlign: TextAlign.center,
-                    ),
-
-                    const SizedBox(height: 8),
-
-                    // ⭐ Clear guidance
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: AppColors.academicBlue.withOpacity(0.08),
-                        borderRadius: BorderRadius.circular(8),
+          padding: EdgeInsets.symmetric(
+            horizontal: isDesktop ? 0 : 20,
+            vertical: 24,
+          ),
+          child: Center(
+            child: Container(
+              width: isDesktop ? 480 : double.infinity,
+              child: Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Center(
+                        child: Icon(Icons.school,
+                            size: 56, color: AppColors.academicBlue),
                       ),
-                      child: const Text(
-                        'Faculty accounts use Google Sign-In.\nPlease continue with Google below.',
+                      const SizedBox(height: 16),
+
+                      Text(
+                        'Faculty Login',
+                        style: AppTextStyles.h2,
                         textAlign: TextAlign.center,
                       ),
-                    ),
 
-                    const SizedBox(height: 24),
+                      const SizedBox(height: 8),
 
-                    // ⭐ Google Sign-In (PRIMARY)
-                    SizedBox(
-                      height: 48,
-                      child: ElevatedButton.icon(
-                        onPressed: _handleGoogleSignIn,
-                        icon: const Icon(Icons.public),
-                        label: const Text('Continue with Google'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.academicBlue,
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color:
+                              AppColors.academicBlue.withOpacity(0.08),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Text(
+                          'You can register or login using Google or Email.',
+                          textAlign: TextAlign.center,
                         ),
                       ),
-                    ),
 
-                    const SizedBox(height: 24),
+                      const SizedBox(height: 24),
 
-                    // ⭐ Optional Email/Password (Collapsed mentally)
-                    ExpansionTile(
-                      title: const Text('Use Email & Password (Optional)'),
-                      children: [
-                        Form(
-                          key: _formKey,
-                          child: Column(
-                            children: [
-                              TextFormField(
-                                controller: _emailController,
-                                validator: Validators.validateEmail,
-                                decoration: const InputDecoration(
-                                  labelText: 'Email',
-                                ),
-                              ),
-                              const SizedBox(height: 12),
-                              TextFormField(
-                                controller: _passwordController,
-                                obscureText: _obscurePassword,
-                                decoration: InputDecoration(
-                                  labelText: 'Password',
-                                  suffixIcon: IconButton(
-                                    icon: Icon(_obscurePassword
-                                        ? Icons.visibility_off
-                                        : Icons.visibility),
-                                    onPressed: () {
-                                      setState(() {
-                                        _obscurePassword = !_obscurePassword;
-                                      });
-                                    },
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(height: 16),
-                              OutlinedButton(
-                                onPressed: _handleEmailLogin,
-                                child: const Text('Login with Email'),
-                              ),
-                            ],
+                      SizedBox(
+                        height: 48,
+                        child: ElevatedButton.icon(
+                          onPressed: _handleGoogleSignIn,
+                          icon: const Icon(Icons.public),
+                          label: const Text('Continue with Google'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor:
+                                AppColors.academicBlue,
                           ),
                         ),
-                      ],
-                    ),
-                  ],
+                      ),
+
+                      const SizedBox(height: 24),
+
+                      ExpansionTile(
+                        title: const Text('Login with Email'),
+                        children: [
+                          Form(
+                            key: _formKey,
+                            child: Column(
+                              children: [
+                                TextFormField(
+                                  controller: _emailController,
+                                  validator:
+                                      Validators.validateEmail,
+                                  decoration: const InputDecoration(
+                                    labelText: 'Email',
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                                TextFormField(
+                                  controller: _passwordController,
+                                  obscureText: _obscurePassword,
+                                  decoration: InputDecoration(
+                                    labelText: 'Password',
+                                    suffixIcon: IconButton(
+                                      icon: Icon(_obscurePassword
+                                          ? Icons.visibility_off
+                                          : Icons.visibility),
+                                      onPressed: () {
+                                        setState(() {
+                                          _obscurePassword =
+                                              !_obscurePassword;
+                                        });
+                                      },
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 16),
+                                OutlinedButton(
+                                  onPressed: _handleEmailLogin,
+                                  child: const Text('Login with Email'),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 24),
+                      const Divider(),
+                      const SizedBox(height: 12),
+
+                      Row(
+                        mainAxisAlignment:
+                            MainAxisAlignment.center,
+                        children: [
+                          const Text(
+                              "Don't have an account? "),
+                          TextButton(
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) =>
+                                      const FacultyRegistrationScreen(),
+                                ),
+                              );
+                            },
+                            child: const Text(
+                              'Register Here',
+                              style: TextStyle(
+                                  fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
