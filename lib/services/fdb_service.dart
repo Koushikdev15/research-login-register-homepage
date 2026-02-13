@@ -5,7 +5,7 @@ class FdbService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
-  /// 🔒 FINAL COLLECTION NAME (AS IN FIREBASE)
+  /// 🔒 FINAL COLLECTION NAME
   static const String _collection = 'fdb_datum';
 
   /// =========================================================
@@ -19,8 +19,9 @@ class FdbService {
     required DateTime endDate,
     required String type,
     required String name,
-    String? photoUrl, // OPTIONAL
+    String? photoUrl,
   }) async {
+
     final user = _auth.currentUser;
     if (user == null) {
       throw Exception('User not logged in');
@@ -44,6 +45,7 @@ class FdbService {
   /// FETCH LOGGED-IN FACULTY FDB RECORDS
   /// =========================================================
   Stream<QuerySnapshot<Map<String, dynamic>>> getMyFdbRecords() {
+
     final user = _auth.currentUser;
 
     if (user == null) {
@@ -53,6 +55,42 @@ class FdbService {
     return _firestore
         .collection(_collection)
         .where('email', isEqualTo: user.email)
+        .orderBy('createdAt', descending: true)
+        .snapshots();
+  }
+
+  /// =========================================================
+  /// UPDATE FDB (ADMIN USE)
+  /// =========================================================
+  Future<void> updateFdb({
+    required String docId,
+    required Map<String, dynamic> updatedData,
+  }) async {
+
+    await _firestore
+        .collection(_collection)
+        .doc(docId)
+        .update(updatedData);
+  }
+
+  /// =========================================================
+  /// DELETE FDB (ADMIN USE)
+  /// =========================================================
+  Future<void> deleteFdb(String docId) async {
+
+    await _firestore
+        .collection(_collection)
+        .doc(docId)
+        .delete();
+  }
+
+  /// =========================================================
+  /// FETCH ALL FDB (ADMIN DASHBOARD)
+  /// =========================================================
+  Stream<QuerySnapshot<Map<String, dynamic>>> getAllFdbRecords() {
+
+    return _firestore
+        .collection(_collection)
         .orderBy('createdAt', descending: true)
         .snapshots();
   }

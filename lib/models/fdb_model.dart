@@ -1,7 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class FdbModel {
-  final String id;
   final String title;
   final String organization;
   final String duration;
@@ -10,11 +9,10 @@ class FdbModel {
   final String type;
   final String email;
   final String name;
-  final String photoUrl;
-  final DateTime createdAt;
+  final String? photoUrl;
+  final Timestamp createdAt;
 
   FdbModel({
-    required this.id,
     required this.title,
     required this.organization,
     required this.duration,
@@ -23,25 +21,39 @@ class FdbModel {
     required this.type,
     required this.email,
     required this.name,
-    required this.photoUrl,
+    this.photoUrl,
     required this.createdAt,
   });
 
-  factory FdbModel.fromFirestore(DocumentSnapshot doc) {
-    final data = doc.data() as Map<String, dynamic>;
+  // 🔹 Convert to Firestore Map
+  Map<String, dynamic> toMap() {
+    return {
+      'title': title,
+      'organization': organization,
+      'duration': duration,
+      'startDate': Timestamp.fromDate(startDate),
+      'endDate': Timestamp.fromDate(endDate),
+      'type': type,
+      'email': email,
+      'name': name,
+      'photoUrl': photoUrl,
+      'createdAt': createdAt,
+    };
+  }
 
+  // 🔹 Convert Firestore → Model
+  factory FdbModel.fromMap(Map<String, dynamic> map) {
     return FdbModel(
-      id: doc.id,
-      title: data['title'] ?? '',
-      organization: data['organization'] ?? '',
-      duration: data['duration'] ?? '',
-      startDate: (data['startDate'] as Timestamp).toDate(),
-      endDate: (data['endDate'] as Timestamp).toDate(),
-      type: data['type'] ?? '',
-      email: data['email'] ?? '',
-      name: data['name'] ?? '',
-      photoUrl: data['photoUrl'] ?? '',
-      createdAt: (data['createdAt'] as Timestamp).toDate(),
+      title: map['title'] ?? '',
+      organization: map['organization'] ?? '',
+      duration: map['duration'] ?? '',
+      startDate: (map['startDate'] as Timestamp).toDate(),
+      endDate: (map['endDate'] as Timestamp).toDate(),
+      type: map['type'] ?? '',
+      email: map['email'] ?? '',
+      name: map['name'] ?? '',
+      photoUrl: map['photoUrl'],
+      createdAt: map['createdAt'] ?? Timestamp.now(),
     );
   }
 }
