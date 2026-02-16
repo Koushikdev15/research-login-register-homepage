@@ -6,11 +6,16 @@ import '../models/user_model.dart';
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
-  final GoogleSignIn _googleSignIn = GoogleSignIn(
-    clientId: kIsWeb 
-        ? '419326217425-35gsfdn73qvkeskid96mi6rmkht8etn1.apps.googleusercontent.com' 
-        : null,
-  );
+ final GoogleSignIn _googleSignIn = GoogleSignIn(
+  clientId: kIsWeb
+      ? '419326217425-35gsfdn73qvkeskid96mi6rmkht8etn1.apps.googleusercontent.com'
+      : null,
+  scopes: [
+    'email',
+    'https://www.googleapis.com/auth/drive.file',
+  ],
+);
+
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   // Get current user

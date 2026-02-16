@@ -43,7 +43,6 @@ class _ResearchVerificationPageState extends State<ResearchVerificationPage>
     super.dispose();
   }
 
-  /// 🔄 Manual admin-triggered sync
   Future<void> _syncCurrentYearWorks() async {
     setState(() => _isSyncing = true);
 
@@ -114,11 +113,11 @@ class _ResearchVerificationPageState extends State<ResearchVerificationPage>
           ),
         ),
 
-        /// 🔹 Data View
+        /// 🔹 Data View (TREE MODEL SAFE)
         Expanded(
           child: StreamBuilder<QuerySnapshot>(
             stream: FirebaseFirestore.instance
-                .collection('research_verifications')
+                .collectionGroup('works')
                 .where('publicationYear', isEqualTo: _currentYear)
                 .where('verificationStatus', isEqualTo: 'PENDING')
                 .snapshots(),
@@ -166,10 +165,18 @@ class _ResearchVerificationPageState extends State<ResearchVerificationPage>
                       final data =
                           doc.data() as Map<String, dynamic>;
 
-                      return ResearchWorkCard(
-                        docId: doc.id,
-                        data: data,
-                      );
+                      
+// 🔐 Extract facultyId from TREE path
+final facultyId = doc.reference.path.split('/')[1];
+
+return ResearchWorkCard(
+  facultyId: facultyId,
+  year: data['publicationYear'].toString(),
+  workType: data['workType'],
+  putCode: data['putCode'],
+  data: data,
+);
+
                     },
                   );
                 }).toList(),
@@ -182,20 +189,12 @@ class _ResearchVerificationPageState extends State<ResearchVerificationPage>
   }
 }
 
-/* =======================================================
-   🔹 FILTER MODEL
-   ======================================================= */
-
 class _WorkFilter {
   final String label;
   final String? workType;
 
   const _WorkFilter(this.label, this.workType);
 }
-
-/* =======================================================
-   🔹 EMPTY STATE
-   ======================================================= */
 
 class _EmptyState extends StatelessWidget {
   const _EmptyState();
@@ -218,10 +217,6 @@ class _EmptyState extends StatelessWidget {
     );
   }
 }
-
-/* =======================================================
-   🔹 ERROR STATE
-   ======================================================= */
 
 class _ErrorState extends StatelessWidget {
   final String message;

@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
+import 'package:file_picker/file_picker.dart';
 import '../../services/fdb_service.dart';
+import '../../services/drive_service.dart';
+import 'dart:io';
 
 class FdbAddPage extends StatefulWidget {
   const FdbAddPage({super.key});
@@ -13,31 +16,46 @@ class FdbAddPage extends StatefulWidget {
 
 class _FdbAddPageState extends State<FdbAddPage> {
   final _formKey = GlobalKey<FormState>();
-  final _fdbService = FdbService();
+  final FdbService _fdbService = FdbService();
+  final DriveService _driveService = DriveService();
 
-  // FIXED: Corrected the typo and initialization
   late TextEditingController _titleController;
   late TextEditingController _organizationController;
   late TextEditingController _durationController;
-  late TextEditingController _typeController;
 
   DateTime? _startDate;
   DateTime? _endDate;
+  String? _selectedType;
 
   String _facultyName = '';
   String _facultyEmail = '';
 
   bool _loadingProfile = true;
   bool _isSaving = false;
+  bool _isUploading = false;
+
+  String? _certificateUrl;
+
+  final List<String> _types = [
+    "NPTEL",
+    "Online Course",
+    "ATAL - FDP",
+    "FDP",
+    "Seminar",
+    "Webinar",
+    "Seminar Conducted",
+    "Webinar Conducted",
+    "FDP Conducted",
+    "Awards",
+    "Other Certificate"
+  ];
 
   @override
   void initState() {
     super.initState();
-    // Initialize controllers here to avoid 'this' access errors
     _titleController = TextEditingController();
     _organizationController = TextEditingController();
     _durationController = TextEditingController();
-    _typeController = TextEditingController();
     _loadFacultyInfo();
   }
 
@@ -46,35 +64,96 @@ class _FdbAddPageState extends State<FdbAddPage> {
     _titleController.dispose();
     _organizationController.dispose();
     _durationController.dispose();
-    _typeController.dispose();
     super.dispose();
   }
 
   Future<void> _loadFacultyInfo() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
-    _facultyEmail = user.email ?? '';
-    try {
-      final doc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .collection('personalInfo')
-          .doc('info')
-          .get();
-      if (doc.exists) {
-        _facultyName = doc.data()?['name'] ?? '';
-      }
-    } catch (_) {}
+
+    _facultyEmail = user.email ?? "";
+
+    final doc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .collection('personalInfo')
+        .doc('info')
+        .get();
+
+    if (doc.exists) {
+      _facultyName = doc.data()?['name'] ?? "";
+    }
+
     setState(() => _loadingProfile = false);
+  }
+
+  void _calculateDuration() {
+    if (_startDate != null && _endDate != null) {
+      final days = _endDate!.difference(_startDate!).inDays + 1;
+      _durationController.text = "$days Days";
+    }
+  }
+
+  // ✅ GOOGLE DRIVE UPLOAD (FIXED CORRECTLY)
+  Future<void> _uploadCertificate() async {
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['jpg', 'jpeg', 'png'],
+      );
+
+      if (result == null) return;
+
+      setState(() => _isUploading = true);
+
+      final path = result.files.single.path;
+      if (path == null) {
+        _showMsg("Invalid file");
+        setState(() => _isUploading = false);
+        return;
+      }
+
+      final file = File(path);
+
+     final fileId = await _driveService.uploadFile(
+  file: file,
+  folderName: "fdb_certificates",
+);
+
+
+      if (fileId == null) {
+        _showMsg("Upload failed");
+        setState(() => _isUploading = false);
+        return;
+      }
+
+      setState(() {
+        _certificateUrl = fileId; // storing Drive file ID
+        _isUploading = false;
+      });
+
+      _showMsg("Uploaded to Faculty Drive Successfully");
+    } catch (e) {
+      setState(() => _isUploading = false);
+      _showMsg("Upload error: $e");
+    }
   }
 
   Future<void> _saveFdb() async {
     if (!_formKey.currentState!.validate()) return;
+
     if (_startDate == null || _endDate == null) {
-      _showMsg('Please select start and end dates');
+      _showMsg("Select start and end dates");
       return;
     }
+
+    if (_selectedType == null) {
+      _showMsg("Select type");
+      return;
+    }
+
     setState(() => _isSaving = true);
+
     try {
       await _fdbService.addFdb(
         title: _titleController.text.trim(),
@@ -82,20 +161,23 @@ class _FdbAddPageState extends State<FdbAddPage> {
         duration: _durationController.text.trim(),
         startDate: _startDate!,
         endDate: _endDate!,
-        type: _typeController.text.trim(),
+        type: _selectedType!,
         name: _facultyName,
+        photoUrl: _certificateUrl,
       );
+
       if (!mounted) return;
       Navigator.pop(context);
     } catch (e) {
-      _showMsg('Error: $e');
+      _showMsg("Error: $e");
     } finally {
       if (mounted) setState(() => _isSaving = false);
     }
   }
 
   void _showMsg(String msg) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(msg)));
   }
 
   @override
@@ -103,11 +185,11 @@ class _FdbAddPageState extends State<FdbAddPage> {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FA),
       appBar: AppBar(
-        title: const Text('Add FDP', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text("Add Certificate",
+            style: TextStyle(fontWeight: FontWeight.bold)),
         centerTitle: true,
         backgroundColor: Colors.indigo,
         foregroundColor: Colors.white,
-        elevation: 0,
       ),
       body: _loadingProfile
           ? const Center(child: CircularProgressIndicator())
@@ -116,52 +198,96 @@ class _FdbAddPageState extends State<FdbAddPage> {
               child: ListView(
                 padding: const EdgeInsets.all(20),
                 children: [
-                  _buildSectionTitle("Program Details"),
+
+                  _sectionTitle("Program Details"),
                   const SizedBox(height: 15),
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: _cardDecoration(),
-                    child: Column(
-                      children: [
-                        _field(_titleController, 'Title', Icons.title),
-                        _field(_organizationController, 'Organization', Icons.business),
-                        _field(_durationController, 'Duration', Icons.timelapse),
-                        _field(_typeController, 'Type (FDP / Seminar / Webinar)', Icons.category),
-                      ],
-                    ),
-                  ),
+
+                  _card(Column(
+                    children: [
+                      _field(_titleController, "Title", Icons.title),
+                      _field(_organizationController, "Organization", Icons.business),
+
+                      DropdownButtonFormField<String>(
+                        value: _selectedType,
+                        decoration: const InputDecoration(
+                          labelText: "Type",
+                          prefixIcon: Icon(Icons.category),
+                          border: OutlineInputBorder(),
+                        ),
+                        items: _types
+                            .map((type) => DropdownMenuItem(
+                                  value: type,
+                                  child: Text(type),
+                                ))
+                            .toList(),
+                        onChanged: (value) =>
+                            setState(() => _selectedType = value),
+                        validator: (value) =>
+                            value == null ? "Select Type" : null,
+                      ),
+
+                      const SizedBox(height: 12),
+
+                      _field(_durationController, "Duration (Auto)",
+                          Icons.timelapse,
+                          readOnly: true),
+
+                      const SizedBox(height: 12),
+
+                      _isUploading
+                          ? const CircularProgressIndicator()
+                          : OutlinedButton.icon(
+                              onPressed: _uploadCertificate,
+                              icon: const Icon(Icons.upload_file),
+                              label: Text(
+                                _certificateUrl == null
+                                    ? "Upload Certificate Image"
+                                    : "Image Uploaded ✓",
+                              ),
+                            ),
+                    ],
+                  )),
+
                   const SizedBox(height: 20),
-                  _buildSectionTitle("Duration"),
+
+                  _sectionTitle("Duration"),
                   const SizedBox(height: 10),
-                  Container(
-                    decoration: _cardDecoration(),
-                    child: Column(
-                      children: [
-                        _dateTile('Start Date', _startDate, (d) => setState(() => _startDate = d)),
-                        const Divider(height: 1),
-                        _dateTile('End Date', _endDate, (d) => setState(() => _endDate = d)),
-                      ],
-                    ),
-                  ),
+
+                  _card(Column(
+                    children: [
+                      _dateTile("Start Date", _startDate, (d) {
+                        setState(() => _startDate = d);
+                        _calculateDuration();
+                      }),
+                      const Divider(),
+                      _dateTile("End Date", _endDate, (d) {
+                        setState(() => _endDate = d);
+                        _calculateDuration();
+                      }),
+                    ],
+                  )),
+
                   const SizedBox(height: 20),
-                  _buildSectionTitle("Faculty Info"),
+
+                  _sectionTitle("Faculty Info"),
                   const SizedBox(height: 10),
-                  _readOnlyField(_facultyEmail, 'Email', Icons.email),
+
+                  _readOnly(_facultyEmail, "Email", Icons.email),
                   const SizedBox(height: 12),
-                  _readOnlyField(_facultyName, 'Name', Icons.person),
+                  _readOnly(_facultyName, "Name", Icons.person),
+
                   const SizedBox(height: 30),
+
                   _isSaving
-                      ? const Center(child: CircularProgressIndicator())
+                      ? const CircularProgressIndicator()
                       : SizedBox(
                           height: 55,
                           child: ElevatedButton(
                             onPressed: _saveFdb,
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.indigo,
-                              foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                             ),
-                            child: const Text('SAVE RECORD', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                            child: const Text("SAVE RECORD"),
                           ),
                         ),
                 ],
@@ -170,40 +296,51 @@ class _FdbAddPageState extends State<FdbAddPage> {
     );
   }
 
-  Widget _buildSectionTitle(String title) {
-    return Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.indigo));
+  Widget _sectionTitle(String title) {
+    return Text(title,
+        style: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: Colors.indigo));
   }
 
-  BoxDecoration _cardDecoration() {
-    return BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(12),
-      boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)],
+  Widget _card(Widget child) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: child,
     );
   }
 
-  Widget _field(TextEditingController controller, String label, IconData icon) {
+  Widget _field(TextEditingController controller, String label,
+      IconData icon,
+      {bool readOnly = false}) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: TextFormField(
         controller: controller,
+        readOnly: readOnly,
         decoration: InputDecoration(
           labelText: label,
-          prefixIcon: Icon(icon, size: 20),
+          prefixIcon: Icon(icon),
           border: const OutlineInputBorder(),
         ),
-        validator: (v) => v == null || v.trim().isEmpty ? 'Required' : null,
+        validator: (v) =>
+            v == null || v.trim().isEmpty ? "Required" : null,
       ),
     );
   }
 
-  Widget _readOnlyField(String value, String label, IconData icon) {
+  Widget _readOnly(String value, String label, IconData icon) {
     return TextFormField(
       initialValue: value,
       readOnly: true,
       decoration: InputDecoration(
         labelText: label,
-        prefixIcon: Icon(icon, size: 20),
+        prefixIcon: Icon(icon),
         filled: true,
         fillColor: Colors.grey[200],
         border: const OutlineInputBorder(),
@@ -211,11 +348,14 @@ class _FdbAddPageState extends State<FdbAddPage> {
     );
   }
 
-  Widget _dateTile(String label, DateTime? date, Function(DateTime) onPick) {
+  Widget _dateTile(
+      String label, DateTime? date, Function(DateTime) onPick) {
     return ListTile(
       leading: const Icon(Icons.calendar_month, color: Colors.indigo),
-      title: Text(date == null ? label : DateFormat('dd MMM yyyy').format(date!)),
-      trailing: const Icon(Icons.edit, size: 18),
+      title: Text(date == null
+          ? label
+          : DateFormat("dd MMM yyyy").format(date)),
+      trailing: const Icon(Icons.edit),
       onTap: () async {
         final picked = await showDatePicker(
           context: context,

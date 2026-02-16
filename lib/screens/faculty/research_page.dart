@@ -40,11 +40,15 @@ class _ResearchPageState extends State<ResearchPage> {
 
     try {
       final grouped = await OrcidService.fetchGroupedWorks(orcidId);
+
+      if (!mounted) return;
+
       setState(() {
         _grouped = grouped;
         _loading = false;
       });
     } catch (_) {
+      if (!mounted) return;
       setState(() {
         _error = 'Failed to load research data';
         _loading = false;
@@ -184,6 +188,7 @@ class _WorksSliver extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final Map<String, List<WorkItem>> byYear = {};
+
     final visible = selectedType == 'all'
         ? grouped
         : {selectedType: grouped[selectedType] ?? []};
@@ -195,7 +200,12 @@ class _WorksSliver extends StatelessWidget {
       }
     });
 
-    final years = byYear.keys.toList()..sort((a, b) => b.compareTo(a));
+    final years = byYear.keys.toList()
+      ..sort((a, b) {
+        if (a == 'Unknown') return 1;
+        if (b == 'Unknown') return -1;
+        return b.compareTo(a);
+      });
 
     return SliverList(
       delegate: SliverChildBuilderDelegate(
@@ -229,10 +239,9 @@ class _WorksSliver extends StatelessWidget {
                   ),
                 ),
                 const Padding(
-  padding: EdgeInsets.symmetric(vertical: 8),
-  child: Divider(color: Colors.white24),
-),
-
+                  padding: EdgeInsets.symmetric(vertical: 8),
+                  child: Divider(color: Colors.white24),
+                ),
                 if (expanded)
                   ...works.map((w) => _WorkCardWithBadges(work: w)),
               ],
@@ -246,7 +255,7 @@ class _WorksSliver extends StatelessWidget {
 }
 
 /* =======================================================
-   🔹 WORK CARD WITH BADGES (FACULTY VIEW)
+   🔹 WORK CARD WITH BADGES (TREE MODEL)
    ======================================================= */
 
 class _WorkCardWithBadges extends StatelessWidget {
@@ -263,116 +272,95 @@ class _WorkCardWithBadges extends StatelessWidget {
 
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 16),
-      padding: const EdgeInsets.symmetric(
-        horizontal: 22,
-        vertical: 22,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 22),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
           colors: [Color(0xFF0F172A), Color(0xFF020617)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: Colors.white12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.45),
-            blurRadius: 14,
-            offset: const Offset(0, 8),
-          ),
-        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          /// 🔹 TITLE
           Text(
             work.title,
             style: const TextStyle(
               color: Colors.white,
               fontWeight: FontWeight.w700,
               fontSize: 16,
-              height: 1.4,
             ),
           ),
-
           const SizedBox(height: 10),
-
-          /// 🔹 META LINE
           Row(
             children: [
               Expanded(
                 child: Text(
-                  '${work.source ?? ''}',
-                  style: const TextStyle(
-                    color: Colors.white70,
-                    fontSize: 13,
-                  ),
+                  work.source ?? '',
+                  style: const TextStyle(color: Colors.white70),
                 ),
               ),
               if (work.year != null)
                 Text(
                   work.year!,
-                  style: const TextStyle(
-                    color: Colors.white54,
-                    fontSize: 13,
-                  ),
+                  style: const TextStyle(color: Colors.white54),
                 ),
             ],
           ),
-
           const SizedBox(height: 18),
 
-          /// 🔹 BADGES
           if (_isCurrentYear && uid != null)
-            StreamBuilder<QuerySnapshot>(
-              stream: FirebaseFirestore.instance
-                  .collection('research_verifications')
-                  .where('facultyId', isEqualTo: uid)
-                  .where('putCode', isEqualTo: work.putCode)
-                  .limit(1)
-                  .snapshots(),
-              builder: (context, snapshot) {
-                if (!snapshot.hasData ||
-                    snapshot.data!.docs.isEmpty) {
-                  return const _Badge(text: 'PENDING');
-                }
+            StreamBuilder<DocumentSnapshot>(
+  stream: FirebaseFirestore.instance
+      .collection('research_verifications_tree')
+      .doc(uid)
+      .collection('years')
+      .doc(work.year ?? '')
+      .collection('workTypes')
+      .doc(work.type)
+      .collection('works')
+      .doc(work.putCode)
+      .snapshots(),
+  builder: (context, snapshot) {
+    if (!snapshot.hasData || !snapshot.data!.exists) {
+      return const _Badge(text: 'PENDING');
+    }
 
-                final data = snapshot.data!.docs.first.data()
-                    as Map<String, dynamic>;
+    final data =
+        snapshot.data!.data() as Map<String, dynamic>;
 
-                final String? decision =
-                    data['verificationDecision'];
+    final String status =
+        data['verificationStatus'] ?? 'PENDING';
+    final String? type =
+        data['verificationType'];
 
-                return Wrap(
-                  spacing: 10,
-                  runSpacing: 10,
-                  children: [
-                    if (data['isScopus'] == true)
-                      const _Badge(text: 'SCOPUS'),
-                    if (data['isSci'] == true)
-                      const _Badge(text: 'SCI'),
-                    if (data['isIsbnVerified'] == true)
-                      const _Badge(text: 'ISBN'),
-                    _Badge(
-                      text: decision ??
-                          data['verificationStatus'] ??
-                          'PENDING',
-                      highlight:
-                          decision == 'VERIFIED',
-                    ),
-                  ],
-                );
-              },
-            ),
+    return Wrap(
+      spacing: 10,
+      runSpacing: 10,
+      children: [
+        if (type != null)
+          _Badge(
+            text: type,
+            highlight: true,
+          ),
+        _Badge(
+          text: status,
+          highlight: status == 'VERIFIED',
+        ),
+      ],
+    );
+  },
+),
+
         ],
       ),
     );
   }
 }
 
-
+/* =======================================================
+   🔹 BADGE
+   ======================================================= */
 
 class _Badge extends StatelessWidget {
   final String text;
@@ -382,60 +370,10 @@ class _Badge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    Color bgColor;
-    Color borderColor;
-
-    switch (text) {
-      case 'VERIFIED':
-        bgColor = const Color(0xFF14532D);
-        borderColor = const Color(0xFF22C55E);
-        break;
-      case 'SCOPUS':
-        bgColor = const Color(0xFF1E3A8A);
-        borderColor = const Color(0xFF3B82F6);
-        break;
-      case 'SCI':
-        bgColor = const Color(0xFF312E81);
-        borderColor = const Color(0xFF6366F1);
-        break;
-      case 'ISBN':
-        bgColor = const Color(0xFF064E3B);
-        borderColor = const Color(0xFF14B8A6);
-        break;
-      case 'NOT_VERIFIED':
-        bgColor = const Color(0xFF7F1D1D);
-        borderColor = const Color(0xFFEF4444);
-        break;
-      default: // PENDING
-        bgColor = const Color(0xFF374151);
-        borderColor = const Color(0xFF6B7280);
-    }
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: BorderRadius.circular(30),
-        border: Border.all(color: borderColor, width: 1.2),
-        boxShadow: highlight
-            ? [
-                BoxShadow(
-                  color: borderColor.withOpacity(0.5),
-                  blurRadius: 12,
-                  spreadRadius: 1,
-                )
-              ]
-            : [],
-      ),
-      child: Text(
-        text,
-        style: const TextStyle(
-          color: Colors.white,
-          fontSize: 11,
-          fontWeight: FontWeight.w600,
-          letterSpacing: 0.4,
-        ),
-      ),
+    return Chip(
+      label: Text(text),
+      backgroundColor:
+          highlight ? Colors.green.shade800 : Colors.grey.shade800,
     );
   }
 }

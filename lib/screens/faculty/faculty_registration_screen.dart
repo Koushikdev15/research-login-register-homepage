@@ -284,9 +284,11 @@ class _FacultyRegistrationScreenState extends State<FacultyRegistrationScreen> {
         googleScholarId: _researchIDsData['googleScholarId'],
       );
 
-      final citExperience = CITExperience(
-        yearsInCIT: int.tryParse(_citExperienceController.text.trim()) ?? 0,
+      // Calculate CIT experience from date of joining
+      final citExperience = CITExperience.fromDateOfJoining(
+        _personalInfoData['dateOfJoining']!,
       );
+
 
       // 3. Save to Firestore
       final dataSaved = await facultyProvider.saveFacultyData(

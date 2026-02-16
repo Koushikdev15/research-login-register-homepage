@@ -29,38 +29,99 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
     ];
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: _tabs[_currentIndex],
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _currentIndex,
-        onTap: (index) {
-          setState(() {
-            _currentIndex = index;
-          });
-        },
-        selectedItemColor: AppColors.universityNavy,
-        unselectedItemColor: AppColors.mediumGray,
-        backgroundColor: AppColors.pureWhite,
-        type: BottomNavigationBarType.fixed,
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.people),
-            label: 'Faculty',
+@override
+Widget build(BuildContext context) {
+  return LayoutBuilder(
+    builder: (context, constraints) {
+      final isMobile = constraints.maxWidth < 600;
+      final isTablet =
+          constraints.maxWidth >= 600 && constraints.maxWidth < 1100;
+      final isDesktop = constraints.maxWidth >= 1100;
+
+      if (isMobile) {
+        // 📱 Mobile Layout (Bottom Navigation)
+        return Scaffold(
+          body: _tabs[_currentIndex],
+          bottomNavigationBar: BottomNavigationBar(
+            currentIndex: _currentIndex,
+            onTap: (index) {
+              setState(() {
+                _currentIndex = index;
+              });
+            },
+            selectedItemColor: AppColors.universityNavy,
+            unselectedItemColor: AppColors.mediumGray,
+            backgroundColor: AppColors.pureWhite,
+            type: BottomNavigationBarType.fixed,
+            items: const [
+              BottomNavigationBarItem(
+                icon: Icon(Icons.people),
+                label: 'Faculty',
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.verified),
+                label: 'Verification',
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.picture_as_pdf),
+                label: 'Reports',
+              ),
+            ],
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.verified),
-            label: 'Verification',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.picture_as_pdf),
-            label: 'Reports',
-          ),
-        ],
-      ),
-    );
-  }
+        );
+      }
+
+      // 📲 Tablet & 💻 Desktop Layout
+      return Scaffold(
+        body: Row(
+          children: [
+            // 🔹 Sidebar / NavigationRail
+            NavigationRail(
+              selectedIndex: _currentIndex,
+              onDestinationSelected: (index) {
+                setState(() {
+                  _currentIndex = index;
+                });
+              },
+              backgroundColor: AppColors.pureWhite,
+              selectedIconTheme: const IconThemeData(
+                color: AppColors.universityNavy,
+              ),
+              unselectedIconTheme: const IconThemeData(
+                color: AppColors.mediumGray,
+              ),
+              labelType: isTablet
+                  ? NavigationRailLabelType.all
+                  : NavigationRailLabelType.none,
+              destinations: const [
+                NavigationRailDestination(
+                  icon: Icon(Icons.people),
+                  label: Text('Faculty'),
+                ),
+                NavigationRailDestination(
+                  icon: Icon(Icons.verified),
+                  label: Text('Verification'),
+                ),
+                NavigationRailDestination(
+                  icon: Icon(Icons.picture_as_pdf),
+                  label: Text('Reports'),
+                ),
+              ],
+            ),
+
+            const VerticalDivider(width: 1),
+
+            // 🔹 Main Content
+            Expanded(
+              child: _tabs[_currentIndex],
+            ),
+          ],
+        ),
+      );
+    },
+  );
+}
+
 }
 
 /* =======================================================

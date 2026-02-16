@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/user_model.dart';
 import '../services/auth_service.dart';
 
@@ -13,7 +14,7 @@ class AuthProvider with ChangeNotifier {
 
   // Getters
   User? get firebaseUser => _firebaseUser;
-  User? get currentUser => _firebaseUser; // Added alias for compatibility
+  User? get currentUser => _firebaseUser;
   UserModel? get userModel => _userModel;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
@@ -21,7 +22,6 @@ class AuthProvider with ChangeNotifier {
   String? get currentUserId => _firebaseUser?.uid;
 
   AuthProvider() {
-    // Listen to auth state changes
     _authService.authStateChanges.listen((User? user) async {
       _firebaseUser = user;
       if (user != null) {
@@ -33,7 +33,8 @@ class AuthProvider with ChangeNotifier {
     });
   }
 
-  // Load user data from Firestore
+  // ================= LOAD USER DATA =================
+
   Future<void> _loadUserData(String uid) async {
     try {
       _userModel = await _authService.getUserDocument(uid);
@@ -44,7 +45,34 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
-  // Sign up with email and password
+  // ================= PROFILE PICTURE UPDATE (GOOGLE DRIVE) =================
+
+  Future<void> updateProfilePicture(String fileId) async {
+    try {
+      if (_firebaseUser == null) return;
+
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(_firebaseUser!.uid)
+          .update({
+        'profilePictureURL': fileId,
+      });
+
+      // Update local model safely
+      if (_userModel != null) {
+        _userModel = _userModel!.copyWith(
+          profilePictureURL: fileId,
+        );
+      }
+
+      notifyListeners();
+    } catch (e) {
+      throw Exception("Failed to update profile picture: $e");
+    }
+  }
+
+  // ================= AUTH METHODS =================
+
   Future<bool> signUpWithEmailPassword({
     required String email,
     required String password,
@@ -72,7 +100,6 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
-  // Sign in with email and password
   Future<bool> signInWithEmailPassword({
     required String email,
     required String password,
@@ -98,7 +125,6 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
-  // Sign in with Google
   Future<bool> signInWithGoogle({required String role}) async {
     try {
       _isLoading = true;
@@ -118,7 +144,6 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
-  // Sign out
   Future<void> signOut() async {
     try {
       _isLoading = true;
@@ -137,7 +162,6 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
-  // Send password reset email
   Future<bool> sendPasswordResetEmail(String email) async {
     try {
       _isLoading = true;
@@ -157,12 +181,10 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
-  // Check if email is verified
   Future<bool> isEmailVerified() async {
     return await _authService.isEmailVerified();
   }
 
-  // Send email verification
   Future<void> sendEmailVerification() async {
     try {
       await _authService.sendEmailVerification();
@@ -172,13 +194,11 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
-  // Clear error message
   void clearError() {
     _errorMessage = null;
     notifyListeners();
   }
 
-  // Refresh user data
   Future<void> refreshUserData() async {
     if (_firebaseUser != null) {
       await _loadUserData(_firebaseUser!.uid);

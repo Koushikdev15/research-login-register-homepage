@@ -59,6 +59,36 @@ class PersonalInfo {
       'mailId': mailId,
     };
   }
+
+  PersonalInfo copy() => copyWith();
+
+  PersonalInfo copyWith({
+    String? name,
+    String? designation,
+    String? department,
+    int? age,
+    String? dateOfBirth,
+    String? dateOfJoining,
+    String? panNumber,
+    String? aadharNumber,
+    String? contactNo,
+    String? whatsappNo,
+    String? mailId,
+  }) {
+    return PersonalInfo(
+      name: name ?? this.name,
+      designation: designation ?? this.designation,
+      department: department ?? this.department,
+      age: age ?? this.age,
+      dateOfBirth: dateOfBirth ?? this.dateOfBirth,
+      dateOfJoining: dateOfJoining ?? this.dateOfJoining,
+      panNumber: panNumber ?? this.panNumber,
+      aadharNumber: aadharNumber ?? this.aadharNumber,
+      contactNo: contactNo ?? this.contactNo,
+      whatsappNo: whatsappNo ?? this.whatsappNo,
+      mailId: mailId ?? this.mailId,
+    );
+  }
 }
 
 class ResearchIDs {
@@ -91,6 +121,22 @@ class ResearchIDs {
       'orcidId': orcidId,
       'googleScholarId': googleScholarId,
     };
+  }
+
+  ResearchIDs copy() => copyWith();
+
+  ResearchIDs copyWith({
+    String? vidwanId,
+    String? scopusId,
+    String? orcidId,
+    String? googleScholarId,
+  }) {
+    return ResearchIDs(
+      vidwanId: vidwanId ?? this.vidwanId,
+      scopusId: scopusId ?? this.scopusId,
+      orcidId: orcidId ?? this.orcidId,
+      googleScholarId: googleScholarId ?? this.googleScholarId,
+    );
   }
 }
 
@@ -125,24 +171,93 @@ class WorkExperience {
       'addedAt': Timestamp.fromDate(addedAt),
     };
   }
+
+  WorkExperience copy() => copyWith();
+
+  WorkExperience copyWith({
+    String? id,
+    String? institutionName,
+    int? yearsOfExperience,
+    DateTime? addedAt,
+  }) {
+    return WorkExperience(
+      id: id ?? this.id,
+      institutionName: institutionName ?? this.institutionName,
+      yearsOfExperience:
+          yearsOfExperience ?? this.yearsOfExperience,
+      addedAt: addedAt ?? this.addedAt,
+    );
+  }
 }
 
 class CITExperience {
-  final int yearsInCIT;
+  final int years;
+  final int months;
 
-  CITExperience({required this.yearsInCIT});
+  CITExperience({
+    required this.years,
+    required this.months,
+  });
+
+  factory CITExperience.fromDateOfJoining(String dateOfJoining) {
+    try {
+      final parts = dateOfJoining.split('/');
+      if (parts.length != 3) {
+        return CITExperience(years: 0, months: 0);
+      }
+
+      final day = int.parse(parts[0]);
+      final month = int.parse(parts[1]);
+      final year = int.parse(parts[2]);
+
+      final joiningDate = DateTime(year, month, day);
+      final now = DateTime.now();
+
+      int totalMonths =
+          (now.year - joiningDate.year) * 12 +
+          (now.month - joiningDate.month);
+
+      if (now.day < joiningDate.day) {
+        totalMonths--;
+      }
+
+      final years = totalMonths ~/ 12;
+      final months = totalMonths % 12;
+
+      return CITExperience(
+        years: years,
+        months: months,
+      );
+    } catch (e) {
+      return CITExperience(years: 0, months: 0);
+    }
+  }
 
   factory CITExperience.fromFirestore(DocumentSnapshot doc) {
     Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
     return CITExperience(
-      yearsInCIT: data['yearsInCIT'] ?? 0,
+      years: data['years'] ?? 0,
+      months: data['months'] ?? 0,
     );
   }
 
   Map<String, dynamic> toMap() {
     return {
-      'yearsInCIT': yearsInCIT,
+      'years': years,
+      'months': months,
     };
+  }
+
+  CITExperience copy() => copyWith();
+
+  CITExperience copyWith({
+    int? years,
+    int? months,
+  }) {
+    return CITExperience(
+      years: years ?? this.years,
+      months: months ?? this.months,
+    );
   }
 }
 
@@ -165,7 +280,8 @@ class EducationQualification {
     required this.addedAt,
   });
 
-  factory EducationQualification.fromMap(Map<String, dynamic> data, String id) {
+  factory EducationQualification.fromMap(
+      Map<String, dynamic> data, String id) {
     return EducationQualification(
       id: id,
       institutionName: data['institutionName'] ?? '',
@@ -188,5 +304,28 @@ class EducationQualification {
       'duration': duration,
       'addedAt': Timestamp.fromDate(addedAt),
     };
+  }
+
+  EducationQualification copy() => copyWith();
+
+  EducationQualification copyWith({
+    String? id,
+    String? institutionName,
+    String? course,
+    int? startYear,
+    int? endYear,
+    int? duration,
+    DateTime? addedAt,
+  }) {
+    return EducationQualification(
+      id: id ?? this.id,
+      institutionName:
+          institutionName ?? this.institutionName,
+      course: course ?? this.course,
+      startYear: startYear ?? this.startYear,
+      endYear: endYear ?? this.endYear,
+      duration: duration ?? this.duration,
+      addedAt: addedAt ?? this.addedAt,
+    );
   }
 }

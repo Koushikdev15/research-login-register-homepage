@@ -1,203 +1,349 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:provider/provider.dart';
 
 import '../../../../theme/app_colors.dart';
 import '../../../../theme/app_text_styles.dart';
+import '../../../../providers/auth_provider.dart';
 
 class ResearchWorkCard extends StatelessWidget {
-  final String docId;
+  final String facultyId;
+  final String year;
+  final String workType;
+  final String putCode;
   final Map<String, dynamic> data;
 
   const ResearchWorkCard({
     super.key,
-    required this.docId,
+    required this.facultyId,
+    required this.year,
+    required this.workType,
+    required this.putCode,
     required this.data,
   });
 
-  /// 🔒 Final decision writer (single source of truth)
-  Future<void> _setDecision(
+  /// 🔹 Root reference
+  DocumentReference get _rootRef => FirebaseFirestore.instance
+      .collection('research_verifications_tree')
+      .doc(facultyId);
+
+  /// 🔹 Work reference
+  DocumentReference get _workRef => _rootRef
+      .collection('years')
+      .doc(year)
+      .collection('workTypes')
+      .doc(workType)
+      .collection('works')
+      .doc(putCode);
+
+  /// 🔹 VERIFIED with type
+  Future<void> _verifyWithType(
     BuildContext context, {
-    required String decision,
+    required String type,
   }) async {
-    await FirebaseFirestore.instance
-        .collection('research_verifications')
-        .doc(docId)
-        .update({
-      'verificationDecision': decision,
+    final auth = context.read<AuthProvider>();
+    final adminId = auth.currentUserId;
+    if (adminId == null) return;
+
+    await _workRef.update({
+      'verificationStatus': 'VERIFIED',
+      'verificationType': type,
       'verifiedAt': FieldValue.serverTimestamp(),
-      'verifiedBy': 'ADMIN',
+      'verifiedBy': adminId,
     });
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('Marked as $decision'),
+        content: Text('Marked as VERIFIED ($type)'),
         backgroundColor: AppColors.successGreen,
+      ),
+    );
+  }
+
+  /// 🔹 NOT VERIFIED
+  Future<void> _markNotVerified(BuildContext context) async {
+    final auth = context.read<AuthProvider>();
+    final adminId = auth.currentUserId;
+    if (adminId == null) return;
+
+    await _workRef.update({
+      'verificationStatus': 'NOT_VERIFIED',
+      'verificationType': null,
+      'verifiedAt': FieldValue.serverTimestamp(),
+      'verifiedBy': adminId,
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Marked as NOT VERIFIED'),
+        backgroundColor: AppColors.errorRed,
+      ),
+    );
+  }
+
+  /// 🔹 Reset to PENDING
+  Future<void> _resetToPending(BuildContext context) async {
+    await _workRef.update({
+      'verificationStatus': 'PENDING',
+      'verificationType': null,
+      'verifiedAt': null,
+      'verifiedBy': null,
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Reset to PENDING'),
+        backgroundColor: AppColors.universityNavy,
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final String? decision = data['verificationDecision'];
+    return StreamBuilder<DocumentSnapshot>(
+      stream: _workRef.snapshots(), // 🔥 LIVE LISTENING
+      builder: (context, workSnapshot) {
+        final workData =
+            workSnapshot.data?.data() as Map<String, dynamic>? ?? data;
 
-    /// 🔐 Once decided → lock card
-    final bool isLocked = decision != null;
+        final String status =
+            workData['verificationStatus'] ?? 'PENDING';
 
-    return Card(
-      margin: const EdgeInsets.only(bottom: 16),
-      elevation: 3,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            /// Faculty header
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    data['facultyName'] ?? 'Unknown Faculty',
-                    style: AppTextStyles.h4,
-                  ),
-                ),
-                Chip(
-                  label: Text(
-                    data['department'] ?? '',
-                    style: AppTextStyles.caption,
-                  ),
-                ),
-              ],
-            ),
+        final String? type =
+            workData['verificationType'];
 
-            const SizedBox(height: 6),
+        final bool isLocked = status != 'PENDING';
 
-            /// Work title
-            Text(
-              data['workTitle'] ?? 'Untitled Work',
-              style: AppTextStyles.bodyRegular
-                  .copyWith(fontWeight: FontWeight.w600),
-            ),
+        return StreamBuilder<DocumentSnapshot>(
+          stream: _rootRef.snapshots(),
+          builder: (context, rootSnapshot) {
+            final rootData =
+                rootSnapshot.data?.data() as Map<String, dynamic>?;
 
-            const SizedBox(height: 6),
+            final facultyName =
+                rootData?['facultyName'] ?? 'Unknown Faculty';
 
-            /// Meta
-            Text(
-              '${data['publicationYear']} • ${_label(data['workType'])}',
-              style: AppTextStyles.caption
-                  .copyWith(color: AppColors.mediumGray),
-            ),
+            final department =
+                rootData?['department'] ?? '';
 
-            const Divider(height: 24),
+            return Card(
+              margin: const EdgeInsets.only(bottom: 16),
+              elevation: 3,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
 
-            /// 🔘 FIVE DECISION BUTTONS
-            Wrap(
-              spacing: 10,
-              runSpacing: 8,
-              children: [
-                _decisionButton(
-                  label: 'Scopus',
-                  decisionKey: 'SCOPUS',
-                  activeDecision: decision,
-                  locked: isLocked,
-                  color: AppColors.universityNavy,
-                  onTap: () => _setDecision(
-                    context,
-                    decision: 'SCOPUS',
-                  ),
-                ),
-                _decisionButton(
-                  label: 'SCI Journal',
-                  decisionKey: 'SCI',
-                  activeDecision: decision,
-                  locked: isLocked,
-                  color: Colors.indigo,
-                  onTap: () => _setDecision(
-                    context,
-                    decision: 'SCI',
-                  ),
-                ),
-                _decisionButton(
-                  label: 'ISBN',
-                  decisionKey: 'ISBN',
-                  activeDecision: decision,
-                  locked: isLocked,
-                  color: Colors.teal,
-                  onTap: () => _setDecision(
-                    context,
-                    decision: 'ISBN',
-                  ),
-                ),
-                _decisionButton(
-                  label: 'Verified',
-                  decisionKey: 'VERIFIED',
-                  activeDecision: decision,
-                  locked: isLocked,
-                  color: AppColors.successGreen,
-                  onTap: () => _setDecision(
-                    context,
-                    decision: 'VERIFIED',
-                  ),
-                ),
-                _decisionButton(
-                  label: 'Not Verified',
-                  decisionKey: 'NOT_VERIFIED',
-                  activeDecision: decision,
-                  locked: isLocked,
-                  color: AppColors.errorRed,
-                  onTap: () => _setDecision(
-                    context,
-                    decision: 'NOT_VERIFIED',
-                  ),
-                ),
-              ],
-            ),
+                    /// 🔹 Faculty Header
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            facultyName,
+                            style: AppTextStyles.h4,
+                          ),
+                        ),
+                        if (department.isNotEmpty)
+                          Chip(
+                            label: Text(
+                              department,
+                              style: AppTextStyles.caption,
+                            ),
+                          ),
+                      ],
+                    ),
 
-            if (isLocked) ...[
-              const Divider(height: 24),
-              Text(
-                'Final Decision: $decision',
-                style: AppTextStyles.bodySmall.copyWith(
-                  color: AppColors.mediumGray,
-                  fontWeight: FontWeight.w600,
+                    const SizedBox(height: 6),
+
+                    /// 🔹 Work Title
+                    Text(
+                      workData['workTitle'] ?? 'Untitled Work',
+                      style: AppTextStyles.bodyRegular
+                          .copyWith(fontWeight: FontWeight.w600),
+                    ),
+
+                    const SizedBox(height: 6),
+
+                    /// 🔹 Meta
+                    Text(
+                      '$year • ${_label(workType)}',
+                      style: AppTextStyles.caption
+                          .copyWith(color: AppColors.mediumGray),
+                    ),
+
+                    const Divider(height: 24),
+
+                    /// 🔹 Verification Type Buttons
+                    Wrap(
+                      spacing: 10,
+                      runSpacing: 8,
+                      children: [
+                        _verifyButton(
+                          label: 'SCOPUS',
+                          active: type == 'SCOPUS',
+                          locked: isLocked,
+                          color: AppColors.universityNavy,
+                          onTap: () =>
+                              _verifyWithType(context, type: 'SCOPUS'),
+                        ),
+                        _verifyButton(
+                          label: 'SCI',
+                          active: type == 'SCI',
+                          locked: isLocked,
+                          color: Colors.indigo,
+                          onTap: () =>
+                              _verifyWithType(context, type: 'SCI'),
+                        ),
+                        _verifyButton(
+                          label: 'ISBN',
+                          active: type == 'ISBN',
+                          locked: isLocked,
+                          color: Colors.teal,
+                          onTap: () =>
+                              _verifyWithType(context, type: 'ISBN'),
+                        ),
+                        _verifyButton(
+                          label: 'PATENT',
+                          active: type == 'PATENT',
+                          locked: isLocked,
+                          color: Colors.deepPurple,
+                          onTap: () =>
+                              _verifyWithType(context, type: 'PATENT'),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    /// 🔹 Not Verified Button
+                    _statusButton(
+                      label: 'Not Verified',
+                      active: status == 'NOT_VERIFIED',
+                      locked: isLocked,
+                      color: AppColors.errorRed,
+                      onTap: () => _markNotVerified(context),
+                    ),
+
+                    if (isLocked) ...[
+                      const Divider(height: 24),
+
+                      Container(
+  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+  decoration: BoxDecoration(
+    color: status == 'VERIFIED'
+        ? Colors.green.shade100
+        : Colors.red.shade100,
+    borderRadius: BorderRadius.circular(6),
+  ),
+  child: Text(
+    'Final Status: $status',
+    style: TextStyle(
+      fontWeight: FontWeight.bold,
+      color: status == 'VERIFIED'
+          ? Colors.green.shade800
+          : Colors.red.shade800,
+    ),
+  ),
+),
+
+
+                      if (type != null)
+                        Text(
+                          'Type: $type',
+                          style: AppTextStyles.caption,
+                        ),
+
+                      const SizedBox(height: 4),
+
+                      Text(
+                        'Verified By: ${workData['verifiedBy'] ?? 'N/A'}',
+                        style: AppTextStyles.caption,
+                      ),
+
+                      const SizedBox(height: 12),
+
+                      /// 🔹 Edit Button
+                      OutlinedButton(
+                        onPressed: () => _resetToPending(context),
+                        child: const Text('Edit'),
+                      ),
+                    ],
+                  ],
                 ),
               ),
-            ],
-          ],
-        ),
-      ),
+            );
+          },
+        );
+      },
     );
   }
 
-  /// 🔘 Decision Button (single-select, lock-safe)
-  Widget _decisionButton({
-    required String label,
-    required String decisionKey,
-    required String? activeDecision,
-    required bool locked,
-    required Color color,
-    required VoidCallback onTap,
-  }) {
-    final bool isActive = activeDecision == decisionKey;
+  Widget _verifyButton({
+  required String label,
+  required bool active,
+  required bool locked,
+  required Color color,
+  required VoidCallback onTap,
+}) {
+  final bool disabled = locked && !active;
 
-    return OutlinedButton(
-      onPressed: locked ? null : onTap,
-      style: OutlinedButton.styleFrom(
-        side: BorderSide(color: isActive ? color : AppColors.divider),
-        backgroundColor:
-            isActive ? color.withOpacity(0.12) : null,
+  return ElevatedButton(
+    onPressed: locked ? null : onTap,
+    style: ElevatedButton.styleFrom(
+      elevation: active ? 4 : 0,
+      backgroundColor: active
+          ? color
+          : disabled
+              ? Colors.grey.shade300
+              : Colors.grey.shade200,
+      foregroundColor: active
+          ? Colors.white
+          : disabled
+              ? Colors.grey.shade500
+              : Colors.black87,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8),
       ),
-      child: Text(
-        label,
-        style: TextStyle(
-          color: isActive ? color : AppColors.mediumGray,
-          fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
-        ),
+    ),
+    child: Text(label),
+  );
+}
+
+
+  Widget _statusButton({
+  required String label,
+  required bool active,
+  required bool locked,
+  required Color color,
+  required VoidCallback onTap,
+}) {
+  final bool disabled = locked && !active;
+
+  return ElevatedButton(
+    onPressed: locked ? null : onTap,
+    style: ElevatedButton.styleFrom(
+      elevation: active ? 4 : 0,
+      backgroundColor: active
+          ? color
+          : disabled
+              ? Colors.grey.shade300
+              : Colors.grey.shade200,
+      foregroundColor: active
+          ? Colors.white
+          : disabled
+              ? Colors.grey.shade500
+              : Colors.black87,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8),
       ),
-    );
-  }
+    ),
+    child: Text(label),
+  );
+}
 
   static String _label(String? type) {
     switch (type) {

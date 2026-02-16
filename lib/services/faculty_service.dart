@@ -3,7 +3,7 @@ import '../models/faculty_model.dart';
 
 class FacultyService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-
+    FirebaseFirestore get firestore => _firestore;
   // Save personal information
   Future<void> savePersonalInfo(String userId, PersonalInfo personalInfo) async {
     try {
@@ -278,4 +278,91 @@ class FacultyService {
       throw 'Error fetching faculty profile: $e';
     }
   }
+
+  // ==============================
+  // PROFILE EDIT APPROVAL SYSTEM
+  // ==============================
+
+  /// Check if faculty already has a pending profile edit request
+  Future<bool> hasPendingProfileEditRequest(String userId) async {
+    try {
+      QuerySnapshot snapshot = await _firestore
+          .collection('profile_edit_requests')
+          .where('facultyId', isEqualTo: userId)
+          .where('status', isEqualTo: 'PENDING')
+          .limit(1)
+          .get();
+
+      return snapshot.docs.isNotEmpty;
+    } catch (e) {
+      throw 'Error checking pending edit request: $e';
+    }
+  }
+
+  /// Submit full profile edit request
+  Future<void> submitProfileEditRequest({
+    required String userId,
+    required String facultyName,
+    required PersonalInfo updatedPersonalInfo,
+    required ResearchIDs updatedResearchIDs,
+    required CITExperience updatedCITExperience,
+    required List<WorkExperience> updatedWorkExperiences,
+    required List<EducationQualification> updatedEducationQualifications,
+  }) async {
+    try {
+      // 🔒 Safety Check: Only ONE pending request allowed
+      bool hasPending = await hasPendingProfileEditRequest(userId);
+      if (hasPending) {
+        throw 'You already have a pending profile edit request.';
+      }
+
+      // Fetch original profile
+      final originalProfile = await getCompleteFacultyProfile(userId);
+
+      // Convert original models to Map
+      final originalDataSnapshot = {
+        'personalInfo':
+            (originalProfile['personalInfo'] as PersonalInfo?)?.toMap(),
+        'researchIDs':
+            (originalProfile['researchIDs'] as ResearchIDs?)?.toMap(),
+        'citExperience':
+            (originalProfile['citExperience'] as CITExperience?)?.toMap(),
+        'workExperiences': (originalProfile['workExperiences']
+                as List<WorkExperience>)
+            .map((e) => e.toMap())
+            .toList(),
+        'educationQualifications':
+            (originalProfile['educationQualifications']
+                    as List<EducationQualification>)
+                .map((e) => e.toMap())
+                .toList(),
+      };
+
+      // Convert updated models to Map
+      final updatedDataSnapshot = {
+        'personalInfo': updatedPersonalInfo.toMap(),
+        'researchIDs': updatedResearchIDs.toMap(),
+        'citExperience': updatedCITExperience.toMap(),
+        'workExperiences':
+            updatedWorkExperiences.map((e) => e.toMap()).toList(),
+        'educationQualifications':
+            updatedEducationQualifications.map((e) => e.toMap()).toList(),
+      };
+
+      // Create new request document
+      await _firestore.collection('profile_edit_requests').add({
+        'facultyId': userId,
+        'facultyName': facultyName,
+        'requestedAt': FieldValue.serverTimestamp(),
+        'status': 'PENDING',
+        'reviewedAt': null,
+        'reviewedBy': null,
+        'originalDataSnapshot': originalDataSnapshot,
+        'updatedDataSnapshot': updatedDataSnapshot,
+      });
+    } catch (e) {
+      throw 'Error submitting profile edit request: $e';
+    }
+  }
+
 }

@@ -5,91 +5,93 @@ import 'package:printing/printing.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:http/http.dart' as http;
 import '../models/faculty_profile.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import '../services/orcid_service.dart';
+
 
 class PDFService {
-  // Generate Complete Faculty Profile PDF
-  static Future<void> generateFacultyPDF(FacultyProfile faculty) async {
+
+
+
+  
+static Future<void> generateFacultyPDF(
+    FacultyProfile faculty) async {
+
+  try {
     final pdf = pw.Document();
-    
-    // Load profile image if available
+
+    final researchData =
+        await _prepareResearchData(faculty);
+
+    final fdbData =
+        await _prepareFdbData(faculty);
+
     pw.ImageProvider? profileImage;
+
     if (faculty.userModel.profilePictureURL != null) {
       try {
-        final response = await http.get(Uri.parse(faculty.userModel.profilePictureURL!));
+        final response = await http.get(
+            Uri.parse(faculty.userModel.profilePictureURL!));
         if (response.statusCode == 200) {
-          profileImage = pw.MemoryImage(response.bodyBytes);
+          profileImage =
+              pw.MemoryImage(response.bodyBytes);
         }
-      } catch (e) {
-        // Fallback to placeholder if network image fails
-      }
+      } catch (_) {}
     }
 
     pdf.addPage(
       pw.MultiPage(
         pageFormat: PdfPageFormat.a4,
         margin: const pw.EdgeInsets.all(32),
-        build: (pw.Context context) {
-          return [
-            // Header
-            _buildHeader(faculty, profileImage),
-            pw.SizedBox(height: 20),
-            
-            // Personal Information
-            _buildSectionHeader('Personal Information'),
-            _buildPersonalInfoTable(faculty),
-            pw.SizedBox(height: 20),
-            
-            // Research IDs
-            _buildSectionHeader('Research IDs'),
-            _buildResearchIDsTable(faculty),
-            pw.SizedBox(height: 20),
-            
-            // Work Experience
-            _buildSectionHeader('Work Experience'),
-            _buildWorkExperienceList(faculty),
-            pw.SizedBox(height: 10),
-            _buildCITExperience(faculty),
-            pw.SizedBox(height: 20),
-            
-            // Educational Qualification
-            _buildSectionHeader('Educational Qualification'),
-            _buildEducationTable(faculty),
-            pw.SizedBox(height: 20),
-            
-             // Placeholders for future sections
-            _buildSectionHeader('Research & Patents'),
-            pw.Text('[Research data will be displayed here]'),
-            pw.SizedBox(height: 20),
-            
-            _buildSectionHeader('FDB & Certifications'),
-            pw.Text('[FDB data will be displayed here]'),
-
-            // Footer
-            pw.SizedBox(height: 40),
-             pw.Divider(),
-            pw.Row(
-              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-              children: [
-                pw.Text(
-                  'Generated on: ${DateTime.now().toString().split('.')[0]}',
-                  style: const pw.TextStyle(color: PdfColors.grey),
-                ),
-                pw.Text(
-                  'Research CSE Admin Portal',
-                  style: const pw.TextStyle(color: PdfColors.grey),
-                ),
-              ],
-            ),
-          ];
-        },
+        maxPages: 200,
+        footer: (context) => pw.Container(
+          alignment: pw.Alignment.centerRight,
+          child: pw.Text(
+            'Page ${context.pageNumber} of ${context.pagesCount}',
+            style: const pw.TextStyle(
+                fontSize: 9,
+                color: PdfColors.grey),
+          ),
+        ),
+        build: (context) => [
+          _buildHeader(faculty, profileImage),
+          pw.SizedBox(height: 20),
+          _buildSectionHeader('Personal Information'),
+          _buildPersonalInfoTable(faculty),
+          pw.SizedBox(height: 20),
+          _buildSectionHeader('Research IDs'),
+          _buildResearchIDsTable(faculty),
+          pw.SizedBox(height: 20),
+          _buildSectionHeader('Work Experience'),
+          _buildWorkExperienceList(faculty),
+          pw.SizedBox(height: 10),
+          _buildCITExperience(faculty),
+          pw.SizedBox(height: 20),
+          _buildSectionHeader('Educational Qualification'),
+          _buildEducationTable(faculty),
+          pw.SizedBox(height: 20),
+          _buildSectionHeader('Research Publications'),
+..._buildResearchSection(researchData),
+          pw.SizedBox(height: 20),
+          _buildSectionHeader('FDP & Certifications'),
+          _buildFdbSection(fdbData),
+        ],
       ),
     );
 
-    await Printing.sharePdf(
-      bytes: await pdf.save(),
-      filename: '${faculty.personalInfo.name.replaceAll(' ', '_')}_Profile.pdf',
+    await Printing.layoutPdf(
+      name:
+          '${faculty.personalInfo.name.replaceAll(' ', '_')}_Profile.pdf',
+      onLayout: (format) async => pdf.save(),
     );
+
+  } catch (e, stack) {
+    print('PDF ERROR: $e');
+    print(stack);
+    rethrow;
   }
+}
+
 
   // Generate General Info PDF (Subset)
   static Future<void> generateGeneralInfoPDF(FacultyProfile faculty) async {
@@ -261,4 +263,500 @@ class PDFService {
       ]).toList(),
     );
   }
+
+
+static pw.Widget _buildGreenHeader(
+    String text) {
+  return pw.Container(
+    width: double.infinity,
+    padding:
+        const pw.EdgeInsets.all(6),
+    color: PdfColors.green100,
+    child: pw.Text(
+      text,
+      style: pw.TextStyle(
+        fontWeight: pw.FontWeight.bold,
+        color: PdfColors.green800,
+      ),
+    ),
+  );
+}
+
+static pw.Widget _buildRedHeader(
+    String text) {
+  return pw.Container(
+    width: double.infinity,
+    padding:
+        const pw.EdgeInsets.all(6),
+    color: PdfColors.red100,
+    child: pw.Text(
+      text,
+      style: pw.TextStyle(
+        fontWeight: pw.FontWeight.bold,
+        color: PdfColors.red800,
+      ),
+    ),
+  );
+}
+
+static pw.Widget _buildResearchTypeBlock(
+  String type,
+  List<WorkItem> works,
+  bool isVerifiedSection,
+) {
+
+  if (works.isEmpty)
+    return pw.SizedBox();
+
+  return pw.Column(
+    crossAxisAlignment:
+        pw.CrossAxisAlignment.start,
+    children: [
+      pw.SizedBox(height: 10),
+
+      pw.Text(
+        _typeLabel(type),
+        style: pw.TextStyle(
+          fontSize: 12,
+          fontWeight: pw.FontWeight.bold,
+        ),
+      ),
+
+      pw.SizedBox(height: 6),
+
+      _buildResearchTable(
+        type,
+        works,
+        isVerifiedSection,
+      ),
+    ],
+  );
+}
+
+static String _identifierColumnName(String type) {
+  switch (type) {
+    case 'journal-article':
+    case 'conference-paper':
+      return 'DOI';
+
+    case 'book':
+    case 'book-chapter':
+      return 'ISBN / DOI';
+
+    case 'patent':
+      return 'Application No';
+
+    case 'design':
+      return 'Design No';
+
+    default:
+      return 'Identifier';
+  }
+}
+
+
+static String _typeLabel(
+    String type) {
+  switch (type) {
+    case 'journal-article':
+      return 'Journals';
+    case 'conference-paper':
+      return 'Conferences';
+    case 'book':
+      return 'Books';
+    case 'book-chapter':
+      return 'Book Chapters';
+    case 'patent':
+      return 'Utility Patents';
+    case 'design':
+      return 'Design Patents';
+    default:
+      return 'Research';
+  }
+}
+
+
+
+static List<String> _buildRowData({
+  required int index,
+  required WorkItem work,
+  required String type,
+  required bool isVerified,
+}) {
+
+  final identifier =
+      _extractIdentifier(work, type);
+
+  final year =
+      work.year ?? '-';
+
+  return [
+    index.toString(),
+    work.title,
+    work.source ?? '-',
+    year,
+    identifier,
+    isVerified ? 'VERIFIED' : 'PENDING',
+  ];
+}
+
+
+static String _extractIdentifier(
+    WorkItem work,
+    String type) {
+
+  final ids = work.identifiers;
+
+  switch (type) {
+    case 'journal-article':
+    case 'conference-paper':
+      return ids['doi'] ?? '-';
+
+    case 'book':
+    case 'book-chapter':
+      final isbn = ids['isbn'];
+      final doi = ids['doi'];
+      if (isbn != null && doi != null) {
+        return '$isbn, $doi';
+      }
+      return isbn ?? doi ?? '-';
+
+    case 'patent':
+      return ids['pat'] ?? '-';
+
+    case 'design':
+      return ids['pat'] ?? '-';
+
+    default:
+      return '-';
+  }
+}
+
+
+  static List<pw.Widget> _buildResearchSection(
+    Map<String, dynamic> researchData) {
+
+  final verified =
+      researchData['verified']
+          as Map<String, List<WorkItem>>;
+
+  final nonVerified =
+      researchData['nonVerified']
+          as Map<String, List<WorkItem>>;
+
+ final List<pw.Widget> widgets = [];
+
+if (verified.isNotEmpty) {
+  widgets.add(_buildGreenHeader('Verified Works'));
+  widgets.add(pw.SizedBox(height: 8));
+
+  for (var entry in verified.entries) {
+    widgets.add(
+      _buildResearchTypeBlock(
+        entry.key,
+        entry.value,
+        true,
+      ),
+    );
+  }
+}
+
+if (nonVerified.isNotEmpty) {
+  widgets.add(pw.SizedBox(height: 15));
+  widgets.add(_buildRedHeader('Non Verified / Pending Works'));
+  widgets.add(pw.SizedBox(height: 8));
+
+  for (var entry in nonVerified.entries) {
+    widgets.add(
+      _buildResearchTypeBlock(
+        entry.key,
+        entry.value,
+        false,
+      ),
+    );
+  }
+}
+
+return widgets;
+
+}
+
+
+  static Future<Map<String, dynamic>> _prepareResearchData(
+    FacultyProfile faculty) async {
+
+  final researchIDs = faculty.researchIDs;
+  if (researchIDs?.orcidId == null ||
+      researchIDs!.orcidId!.isEmpty) {
+    return {
+      'verified': <String, List<WorkItem>>{},
+      'nonVerified': <String, List<WorkItem>>{},
+    };
+  }
+
+  // 🔹 1. Fetch ORCID Works
+  final groupedWorks =
+      await OrcidService.fetchGroupedWorks(
+          researchIDs.orcidId!);
+
+  final List<WorkItem> allWorks = [];
+
+  groupedWorks.forEach((type, works) {
+    allWorks.addAll(works);
+  });
+
+  // 🔹 2. Fetch Verification Tree (ALL YEARS)
+  final verificationSnapshot =
+      await FirebaseFirestore.instance
+          .collectionGroup('works')
+          .where('facultyId',
+              isEqualTo: faculty.userModel.uid)
+          .get();
+
+  final Map<String, Map<String, dynamic>>
+      verificationMap = {};
+
+  for (var doc in verificationSnapshot.docs) {
+    final data = doc.data();
+    verificationMap[data['putCode']] = data;
+  }
+
+  // 🔹 3. Attach verification
+  final Map<String, List<WorkItem>> verified =
+      {};
+  final Map<String, List<WorkItem>>
+      nonVerified = {};
+
+  for (var work in allWorks) {
+    final verification =
+        verificationMap[work.putCode];
+
+    final status =
+        verification?['verificationStatus'];
+
+    if (status == 'VERIFIED') {
+      verified
+          .putIfAbsent(work.type, () => [])
+          .add(work);
+    } else {
+      nonVerified
+          .putIfAbsent(work.type, () => [])
+          .add(work);
+    }
+  }
+
+  // 🔹 4. Sort All Lists
+  int sortComparator(
+      WorkItem a, WorkItem b) {
+    final ay = int.tryParse(a.year ?? '');
+    final by = int.tryParse(b.year ?? '');
+
+    if (ay == null && by == null) return 0;
+    if (ay == null) return 1;
+    if (by == null) return -1;
+
+    return by.compareTo(ay);
+  }
+
+  verified.forEach((_, list) {
+    list.sort(sortComparator);
+  });
+
+  nonVerified.forEach((_, list) {
+    list.sort(sortComparator);
+  });
+
+  return {
+    'verified': verified,
+    'nonVerified': nonVerified,
+  };
+}
+
+
+static pw.Widget _buildResearchTable(
+  String type,
+  List<WorkItem> works,
+  bool isVerifiedSection,
+) {
+
+  final headers =
+      _getHeaders(type, isVerifiedSection);
+
+  final data = <List<String>>[];
+
+  for (int i = 0; i < works.length; i++) {
+    final w = works[i];
+
+    data.add(
+      _buildRowData(
+        index: i + 1,
+        work: w,
+        type: type,
+        isVerified: isVerifiedSection,
+      ),
+    );
+  }
+
+  return pw.TableHelper.fromTextArray(
+    headerStyle: pw.TextStyle(
+      fontWeight: pw.FontWeight.bold,
+      color: PdfColors.white,
+      fontSize: 9,
+    ),
+    headerDecoration:
+        const pw.BoxDecoration(
+            color: PdfColors.blue800),
+    cellStyle:
+        const pw.TextStyle(fontSize: 9),
+    headers: headers,
+    data: data,
+  );
+}
+
+
+static List<String> _getHeaders(
+    String type,
+    bool isVerifiedSection) {
+
+  final List<String> base = [
+    'S.No',
+    'Title',
+    'Source',
+    'Year',
+    _identifierColumnName(type),
+  ];
+
+  base.add(isVerifiedSection
+      ? 'Indexed As'
+      : 'Status');
+
+  return base;
+}
+
+
+static Future<
+    Map<int, Map<String,
+        List<Map<String, dynamic>>>>>
+    _prepareFdbData(
+        FacultyProfile faculty) async {
+
+  final snapshot =
+      await FirebaseFirestore.instance
+          .collection('fdb_datum')
+          .where('email',
+              isEqualTo:
+                  faculty.userModel.email)
+          .get();
+
+  final Map<int,
+          Map<String,
+              List<Map<String, dynamic>>>>
+      groupedData = {};
+
+  for (var doc in snapshot.docs) {
+    final data = doc.data();
+
+    final startDate =
+        (data['startDate'] as Timestamp?)
+            ?.toDate();
+
+    if (startDate == null) continue;
+
+    final year = startDate.year;
+    final type =
+        data['type'] ?? 'Unknown';
+
+    groupedData
+        .putIfAbsent(year, () => {});
+    groupedData[year]!
+        .putIfAbsent(type, () => []);
+    groupedData[year]![type]!
+        .add(data);
+  }
+
+  // 🔹 Sort Years Descending
+  final sortedYears =
+      groupedData.keys.toList()
+        ..sort((a, b) => b.compareTo(a));
+
+  final sortedMap = {
+    for (var year in sortedYears)
+      year: groupedData[year]!
+  };
+
+  return sortedMap;
+}
+
+
+static pw.Widget _buildFdbSection(
+    Map<int, Map<String,
+        List<Map<String, dynamic>>>> fdbData) {
+
+  if (fdbData.isEmpty) {
+    return pw.Text(
+        'No FDP / Certification records available.');
+  }
+
+  final List<Map<String, dynamic>> flatList = [];
+
+  // Flatten year → type → records
+  fdbData.forEach((year, typeMap) {
+    typeMap.forEach((type, records) {
+      for (var record in records) {
+        flatList.add({
+          ...record,
+          'year': year,
+          'type': type,
+        });
+      }
+    });
+  });
+
+  // Sort by year DESC
+  flatList.sort((a, b) =>
+      (b['year'] as int)
+          .compareTo(a['year'] as int));
+
+  final List<List<String>> tableData =
+      [];
+
+  for (int i = 0;
+      i < flatList.length;
+      i++) {
+    final data = flatList[i];
+
+    tableData.add([
+      (i + 1).toString(),
+      data['year'].toString(),
+      data['type'] ?? '-',
+      data['title'] ?? '-',
+      data['organization'] ?? '-',
+      data['duration'] ?? '-',
+    ]);
+  }
+
+  return pw.TableHelper.fromTextArray(
+    headerStyle: pw.TextStyle(
+      fontWeight: pw.FontWeight.bold,
+      color: PdfColors.white,
+      fontSize: 9,
+    ),
+    headerDecoration:
+        const pw.BoxDecoration(
+            color: PdfColors.indigo800),
+    cellStyle:
+        const pw.TextStyle(fontSize: 9),
+    headers: [
+      'S.No',
+      'Year',
+      'Type',
+      'Title',
+      'Organization',
+      'Duration',
+    ],
+    data: tableData,
+  );
+}
+
+
 }

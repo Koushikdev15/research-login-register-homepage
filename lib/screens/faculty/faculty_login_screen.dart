@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../../providers/auth_provider.dart';
 import '../../utils/constants.dart';
@@ -9,6 +10,7 @@ import '../../theme/app_colors.dart';
 import '../../theme/app_text_styles.dart';
 
 import 'faculty_dashboard.dart';
+import 'faculty_registration_screen.dart';
 
 class FacultyLoginScreen extends StatefulWidget {
   const FacultyLoginScreen({super.key});
@@ -23,7 +25,6 @@ class _FacultyLoginScreenState extends State<FacultyLoginScreen> {
   final _passwordController = TextEditingController();
 
   bool _obscurePassword = true;
-  bool _rememberMe = true;
 
   @override
   void dispose() {
@@ -31,6 +32,10 @@ class _FacultyLoginScreenState extends State<FacultyLoginScreen> {
     _passwordController.dispose();
     super.dispose();
   }
+
+  /* =======================================================
+     🔹 EMAIL LOGIN
+     ======================================================= */
 
   Future<void> _handleEmailLogin() async {
     if (!_formKey.currentState!.validate()) return;
@@ -50,12 +55,16 @@ class _FacultyLoginScreenState extends State<FacultyLoginScreen> {
         MaterialPageRoute(builder: (_) => const FacultyDashboard()),
       );
     } else {
-      // ⭐ Improved message
       _showErrorSnackBar(
-        'This faculty account uses Google Sign-In. Please continue with Google.',
+        authProvider.errorMessage ??
+            'This faculty account may use Google Sign-In.',
       );
     }
   }
+
+  /* =======================================================
+     🔹 GOOGLE LOGIN (WITH PROFILE CHECK)
+     ======================================================= */
 
   Future<void> _handleGoogleSignIn() async {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
@@ -66,15 +75,52 @@ class _FacultyLoginScreenState extends State<FacultyLoginScreen> {
 
     if (!mounted) return;
 
-    if (success) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const FacultyDashboard()),
-      );
-    } else {
-      _showErrorSnackBar(authProvider.errorMessage ?? AppConstants.genericError);
+    if (!success) {
+      _showErrorSnackBar(
+          authProvider.errorMessage ?? AppConstants.genericError);
+      return;
+    }
+
+    final String? uid = authProvider.currentUserId;
+
+    if (uid == null) {
+      _showErrorSnackBar('Authentication failed. Try again.');
+      return;
+    }
+
+    try {
+      // 🔎 Check if profile exists
+      final doc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(uid)
+          .collection('personalInfo')
+          .doc('info')
+          .get();
+
+      if (!mounted) return;
+
+      if (!doc.exists) {
+        // 🆕 First time Google login → complete profile
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+              builder: (_) => const FacultyRegistrationScreen()),
+        );
+      } else {
+        // ✅ Profile exists → go to dashboard
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const FacultyDashboard()),
+        );
+      }
+    } catch (e) {
+      _showErrorSnackBar('Error verifying profile. Please try again.');
     }
   }
+
+  /* =======================================================
+     🔹 ERROR SNACKBAR
+     ======================================================= */
 
   void _showErrorSnackBar(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
@@ -85,6 +131,10 @@ class _FacultyLoginScreenState extends State<FacultyLoginScreen> {
       ),
     );
   }
+
+  /* =======================================================
+     🔹 UI
+     ======================================================= */
 
   @override
   Widget build(BuildContext context) {
@@ -115,7 +165,6 @@ class _FacultyLoginScreenState extends State<FacultyLoginScreen> {
 
                     const SizedBox(height: 8),
 
-                    // ⭐ Clear guidance
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
@@ -123,14 +172,15 @@ class _FacultyLoginScreenState extends State<FacultyLoginScreen> {
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: const Text(
-                        'Faculty accounts use Google Sign-In.\nPlease continue with Google below.',
+                        'You can register or login using Google or Email.',
                         textAlign: TextAlign.center,
                       ),
                     ),
 
                     const SizedBox(height: 24),
 
-                    // ⭐ Google Sign-In (PRIMARY)
+                    /* ================= GOOGLE ================= */
+
                     SizedBox(
                       height: 48,
                       child: ElevatedButton.icon(
@@ -145,9 +195,10 @@ class _FacultyLoginScreenState extends State<FacultyLoginScreen> {
 
                     const SizedBox(height: 24),
 
-                    // ⭐ Optional Email/Password (Collapsed mentally)
+                    /* ================= EMAIL LOGIN ================= */
+
                     ExpansionTile(
-                      title: const Text('Use Email & Password (Optional)'),
+                      title: const Text('Login with Email'),
                       children: [
                         Form(
                           key: _formKey,
@@ -184,6 +235,36 @@ class _FacultyLoginScreenState extends State<FacultyLoginScreen> {
                                 child: const Text('Login with Email'),
                               ),
                             ],
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 24),
+
+                    /* ================= REGISTER ================= */
+
+                    const Divider(),
+
+                    const SizedBox(height: 12),
+
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Text("Don't have an account? "),
+                        TextButton(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) =>
+                                    const FacultyRegistrationScreen(),
+                              ),
+                            );
+                          },
+                          child: const Text(
+                            'Register Here',
+                            style: TextStyle(fontWeight: FontWeight.bold),
                           ),
                         ),
                       ],

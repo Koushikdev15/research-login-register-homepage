@@ -1,199 +1,263 @@
 import 'package:flutter/material.dart';
-import '../../models/faculty_profile.dart'; // Ensure this model exists and is exported
-import '../../utils/constants.dart'; // Ensure constants are available
+import '../../models/faculty_profile.dart';
+import '../../utils/constants.dart';
 import '../../services/pdf_service.dart';
+import '../../theme/app_colors.dart';
+import '../../theme/app_text_styles.dart';
 
 class AdminGeneralInfoScreen extends StatelessWidget {
   final FacultyProfile faculty;
 
-  const AdminGeneralInfoScreen({super.key, required this.faculty});
+  const AdminGeneralInfoScreen({
+    super.key,
+    required this.faculty,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(faculty.personalInfo.name),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.print),
-            onPressed: () {
-               PDFService.generateGeneralInfoPDF(faculty);
-            },
-            tooltip: 'Print General Info',
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isWide = constraints.maxWidth > 900;
+        final containerWidth = isWide ? 1000.0 : double.infinity;
+
+        return Scaffold(
+          backgroundColor: AppColors.offWhite,
+          appBar: AppBar(
+            title: Text(faculty.personalInfo.name),
+            backgroundColor: AppColors.pureWhite,
+            elevation: 2,
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.print),
+                tooltip: 'Print General Info',
+                onPressed: () {
+                  PDFService.generateGeneralInfoPDF(faculty);
+                },
+              ),
+            ],
           ),
-        ],
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(AppConstants.paddingLarge),
-        child: Column(
-          children: [
-            _buildPersonalInformationCard(context),
-            const SizedBox(height: AppConstants.paddingMedium),
-            _buildResearchIDsCard(context),
-            const SizedBox(height: AppConstants.paddingMedium),
-            _buildWorkExperienceCard(context),
-            const SizedBox(height: AppConstants.paddingMedium),
-            _buildEducationCard(context),
-          ],
-        ),
-      ),
+          body: Center(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(maxWidth: containerWidth),
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(24),
+                child: isWide
+                    ? Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: Column(
+                              children: [
+                                _buildPersonalInformationCard(context),
+                                const SizedBox(height: 24),
+                                _buildResearchIDsCard(context),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 24),
+                          Expanded(
+                            child: Column(
+                              children: [
+                                _buildWorkExperienceCard(context),
+                                const SizedBox(height: 24),
+                                _buildEducationCard(context),
+                              ],
+                            ),
+                          ),
+                        ],
+                      )
+                    : Column(
+                        children: [
+                          _buildPersonalInformationCard(context),
+                          const SizedBox(height: 24),
+                          _buildResearchIDsCard(context),
+                          const SizedBox(height: 24),
+                          _buildWorkExperienceCard(context),
+                          const SizedBox(height: 24),
+                          _buildEducationCard(context),
+                        ],
+                      ),
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 
+  // =======================================================
+  // CARDS
+  // =======================================================
+
   Widget _buildPersonalInformationCard(BuildContext context) {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: ExpansionTile(
-        title: const Row(
-          children: [
-            Icon(Icons.person, color: Colors.blue),
-            SizedBox(width: 8),
-            Text('Personal Information',
-                style: TextStyle(fontWeight: FontWeight.bold)),
-          ],
-        ),
-        initiallyExpanded: true,
-        children: [
-          _buildInfoRow('Name', faculty.personalInfo.name),
-          _buildInfoRow('Designation', faculty.personalInfo.designation),
-          _buildInfoRow('Department', faculty.personalInfo.department),
-          _buildInfoRow('Age', '${faculty.personalInfo.age}'),
-          _buildInfoRow('Date of Birth', faculty.personalInfo.dateOfBirth),
-          _buildInfoRow('Date of Joining', faculty.personalInfo.dateOfJoining),
-           _buildInfoRow('PAN Number', faculty.personalInfo.panNumber),
-          _buildInfoRow('Aadhar Number', faculty.personalInfo.aadharNumber),
-          _buildInfoRow('Contact', faculty.personalInfo.contactNo),
-           _buildInfoRow('WhatsApp', faculty.personalInfo.whatsappNo),
-          _buildInfoRow('Email', faculty.personalInfo.mailId),
-          const SizedBox(height: 8),
-        ],
-      ),
+    return _styledCard(
+      title: 'Personal Information',
+      icon: Icons.person,
+      children: [
+        _buildInfoRow(context, 'Name', faculty.personalInfo.name),
+        _buildInfoRow(context, 'Designation', faculty.personalInfo.designation),
+        _buildInfoRow(context, 'Department', faculty.personalInfo.department),
+        _buildInfoRow(context, 'Age', '${faculty.personalInfo.age}'),
+        _buildInfoRow(context, 'Date of Birth', faculty.personalInfo.dateOfBirth),
+        _buildInfoRow(context, 'Date of Joining', faculty.personalInfo.dateOfJoining),
+        _buildInfoRow(context, 'PAN Number', faculty.personalInfo.panNumber),
+        _buildInfoRow(context, 'Aadhar Number', faculty.personalInfo.aadharNumber),
+        _buildInfoRow(context, 'Contact', faculty.personalInfo.contactNo),
+        _buildInfoRow(context, 'WhatsApp', faculty.personalInfo.whatsappNo),
+        _buildInfoRow(context, 'Email', faculty.personalInfo.mailId),
+      ],
     );
   }
 
   Widget _buildResearchIDsCard(BuildContext context) {
     final ids = faculty.researchIDs;
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: ExpansionTile(
-        title: const Row(
-          children: [
-            Icon(Icons.card_membership, color: Colors.green),
-            SizedBox(width: 8),
-            Text('Research IDs', style: TextStyle(fontWeight: FontWeight.bold)),
-          ],
-        ),
-        children: [
-          if (ids != null) ...[
-            _buildInfoRow('Vidwan ID', ids.vidwanId ?? 'N/A'),
-            _buildInfoRow('Scopus ID', ids.scopusId ?? 'N/A'),
-             _buildInfoRow('ORCID ID', ids.orcidId ?? 'N/A'),
-            _buildInfoRow('Google Scholar ID', ids.googleScholarId ?? 'N/A'),
-          ] else
-            const Padding(
-              padding: EdgeInsets.all(16.0),
-              child: Text('No Research IDs available'),
-            ),
-          const SizedBox(height: 8),
-        ],
-      ),
+
+    return _styledCard(
+      title: 'Research IDs',
+      icon: Icons.card_membership,
+      children: ids != null
+          ? [
+              _buildInfoRow(context, 'Vidwan ID', ids.vidwanId ?? 'N/A'),
+              _buildInfoRow(context, 'Scopus ID', ids.scopusId ?? 'N/A'),
+              _buildInfoRow(context, 'ORCID ID', ids.orcidId ?? 'N/A'),
+              _buildInfoRow(context, 'Google Scholar ID', ids.googleScholarId ?? 'N/A'),
+            ]
+          : [
+              const Padding(
+                padding: EdgeInsets.all(16),
+                child: Text('No Research IDs available'),
+              )
+            ],
     );
   }
 
   Widget _buildWorkExperienceCard(BuildContext context) {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: ExpansionTile(
-        title: const Row(
-          children: [
-            Icon(Icons.work, color: Colors.orange),
-            SizedBox(width: 8),
-            Text('Work Experience', style: TextStyle(fontWeight: FontWeight.bold)),
-          ],
-        ),
-        children: [
-          if (faculty.workExperiences.isEmpty)
-             const Padding(
-              padding: EdgeInsets.all(16.0),
-              child: Text('No work experience listed'),
-            )
-          else
-            ...faculty.workExperiences.map((exp) => ListTile(
+    return _styledCard(
+      title: 'Work Experience',
+      icon: Icons.work,
+      children: faculty.workExperiences.isEmpty
+          ? [
+              const Padding(
+                padding: EdgeInsets.all(16),
+                child: Text('No work experience listed'),
+              )
+            ]
+          : [
+              ...faculty.workExperiences.map(
+                (exp) => ListTile(
                   title: Text(exp.institutionName),
                   subtitle: Text('${exp.yearsOfExperience} years'),
                   leading: const Icon(Icons.business),
-                )),
-           const Divider(),
-           if (faculty.calculatedCITYears > 0)
-             ListTile(
-              title: const Text('CIT Experience', style: TextStyle(fontWeight: FontWeight.bold)),
-              trailing: Chip(
-                label: Text('${faculty.calculatedCITYears} years'),
-                backgroundColor: Colors.orange[100],
+                ),
               ),
-            ),
-          const SizedBox(height: 8),
-        ],
-      ),
+              const Divider(),
+              if (faculty.calculatedCITYears > 0)
+                ListTile(
+                  title: const Text(
+                    'CIT Experience',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  trailing: Chip(
+                    label: Text('${faculty.calculatedCITYears} years'),
+                    backgroundColor:
+                        AppColors.academicBlue.withOpacity(0.1),
+                  ),
+                ),
+            ],
     );
   }
 
   Widget _buildEducationCard(BuildContext context) {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: ExpansionTile(
-        title: const Row(
-          children: [
-            Icon(Icons.school, color: Colors.purple),
-            SizedBox(width: 8),
-            Text('Educational Qualification',
-                style: TextStyle(fontWeight: FontWeight.bold)),
-          ],
-        ),
-        children: [
-          if (faculty.educationQualifications.isEmpty)
-             const Padding(
-              padding: EdgeInsets.all(16.0),
-              child: Text('No education listed'),
-            )
-          else
-            ...faculty.educationQualifications.map((edu) => ListTile(
+    return _styledCard(
+      title: 'Educational Qualification',
+      icon: Icons.school,
+      children: faculty.educationQualifications.isEmpty
+          ? [
+              const Padding(
+                padding: EdgeInsets.all(16),
+                child: Text('No education listed'),
+              )
+            ]
+          : faculty.educationQualifications
+              .map(
+                (edu) => ListTile(
                   title: Text(edu.course),
                   subtitle: Text(edu.institutionName),
                   trailing: Text(
-                      '${edu.startYear} - ${edu.endYear}\n(${edu.duration} years)'),
+                    '${edu.startYear} - ${edu.endYear}\n(${edu.duration} years)',
+                    textAlign: TextAlign.right,
+                  ),
                   isThreeLine: true,
-                )),
-          const SizedBox(height: 8),
+                ),
+              )
+              .toList(),
+    );
+  }
+
+  // =======================================================
+  // REUSABLE CARD STYLE
+  // =======================================================
+
+  Widget _styledCard({
+    required String title,
+    required IconData icon,
+    required List<Widget> children,
+  }) {
+    return Card(
+      elevation: 2,
+      color: AppColors.pureWhite,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: ExpansionTile(
+        initiallyExpanded: true,
+        title: Row(
+          children: [
+            Icon(icon, color: AppColors.universityNavy),
+            const SizedBox(width: 8),
+            Text(
+              title,
+              style: AppTextStyles.bodyLarge.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+        children: [
+          ...children,
+          const SizedBox(height: 12),
         ],
       ),
     );
   }
 
-  Widget _buildInfoRow(String label, String value) {
+  // =======================================================
+  // RESPONSIVE INFO ROW
+  // =======================================================
+
+  Widget _buildInfoRow(BuildContext context, String label, String value) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final labelWidth = screenWidth > 900 ? 180.0 : 120.0;
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(
-            width: 120,
+            width: labelWidth,
             child: Text(
               label,
-              style: const TextStyle(
+              style: AppTextStyles.bodyRegular.copyWith(
+                color: AppColors.mediumGray,
                 fontWeight: FontWeight.w500,
-                color: Colors.grey,
               ),
             ),
           ),
           Expanded(
             child: Text(
               value,
-              style: const TextStyle(
+              style: AppTextStyles.bodyRegular.copyWith(
                 fontWeight: FontWeight.w500,
               ),
             ),

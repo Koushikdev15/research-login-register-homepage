@@ -1,9 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/faculty_model.dart';
 import '../services/faculty_service.dart';
 
 class FacultyProvider with ChangeNotifier {
   final FacultyService _facultyService = FacultyService();
+
+
+FacultyService get facultyService => _facultyService;
+
 
   PersonalInfo? _personalInfo;
   ResearchIDs? _researchIDs;
@@ -14,6 +19,15 @@ class FacultyProvider with ChangeNotifier {
   bool _isLoading = false;
   String? _errorMessage;
 
+  // ==============================
+// PROFILE EDIT REQUEST STATE
+// ==============================
+
+String? _editRequestStatus; // PENDING | APPROVED | REJECTED
+DateTime? _editRequestReviewedAt;
+bool _hasPendingEditRequest = false;
+
+
   // Getters
   PersonalInfo? get personalInfo => _personalInfo;
   ResearchIDs? get researchIDs => _researchIDs;
@@ -23,10 +37,17 @@ class FacultyProvider with ChangeNotifier {
       _educationQualifications;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
+  String? get editRequestStatus => _editRequestStatus;
+DateTime? get editRequestReviewedAt => _editRequestReviewedAt;
+bool get hasPendingEditRequest => _hasPendingEditRequest;
+
+
 
   // Load complete faculty profile
   Future<void> loadFacultyProfile(String userId) async {
     try {
+
+      
       _isLoading = true;
       _errorMessage = null;
       notifyListeners();
@@ -38,6 +59,7 @@ class FacultyProvider with ChangeNotifier {
       _workExperiences = profile['workExperiences'] ?? [];
       _citExperience = profile['citExperience'];
       _educationQualifications = profile['educationQualifications'] ?? [];
+listenToProfileEditRequest(userId);
 
       _isLoading = false;
       notifyListeners();
@@ -47,6 +69,44 @@ class FacultyProvider with ChangeNotifier {
       notifyListeners();
     }
   }
+
+  // ==============================
+// LISTEN TO PROFILE EDIT REQUEST
+// ==============================
+
+void listenToProfileEditRequest(String userId) {
+  _facultyService.firestore
+      .collection('profile_edit_requests')
+      .where('facultyId', isEqualTo: userId)
+      .orderBy('requestedAt', descending: true)
+      .limit(1)
+      .snapshots()
+      .listen((snapshot) {
+    if (snapshot.docs.isEmpty) {
+      _editRequestStatus = null;
+      _editRequestReviewedAt = null;
+      _hasPendingEditRequest = false;
+    } else {
+      final data = snapshot.docs.first.data();
+
+      _editRequestStatus = data['status'];
+
+      final reviewedAtTimestamp = data['reviewedAt'];
+      if (reviewedAtTimestamp != null) {
+        _editRequestReviewedAt =
+            (reviewedAtTimestamp as Timestamp).toDate();
+      } else {
+        _editRequestReviewedAt = null;
+      }
+
+      _hasPendingEditRequest =
+          _editRequestStatus == 'PENDING';
+    }
+
+    notifyListeners();
+  });
+}
+
 
   // Save complete faculty data (for registration)
   Future<bool> saveFacultyData({
