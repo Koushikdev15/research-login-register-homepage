@@ -13,6 +13,9 @@ class PersonalInfo {
   final String whatsappNo;
   final String mailId;
 
+  // ✅ NEW FIELD
+  final String? photoUrl;
+
   PersonalInfo({
     required this.name,
     required this.designation,
@@ -25,10 +28,12 @@ class PersonalInfo {
     required this.contactNo,
     required this.whatsappNo,
     required this.mailId,
+    this.photoUrl, // ✅ Added
   });
 
   factory PersonalInfo.fromFirestore(DocumentSnapshot doc) {
     Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+
     return PersonalInfo(
       name: data['name'] ?? '',
       designation: data['designation'] ?? '',
@@ -41,6 +46,7 @@ class PersonalInfo {
       contactNo: data['contactNo'] ?? '',
       whatsappNo: data['whatsappNo'] ?? '',
       mailId: data['mailId'] ?? '',
+      photoUrl: data['photoUrl'], // ✅ Added
     );
   }
 
@@ -57,6 +63,7 @@ class PersonalInfo {
       'contactNo': contactNo,
       'whatsappNo': whatsappNo,
       'mailId': mailId,
+      'photoUrl': photoUrl, // ✅ Added
     };
   }
 
@@ -74,6 +81,7 @@ class PersonalInfo {
     String? contactNo,
     String? whatsappNo,
     String? mailId,
+    String? photoUrl, // ✅ Added
   }) {
     return PersonalInfo(
       name: name ?? this.name,
@@ -87,6 +95,7 @@ class PersonalInfo {
       contactNo: contactNo ?? this.contactNo,
       whatsappNo: whatsappNo ?? this.whatsappNo,
       mailId: mailId ?? this.mailId,
+      photoUrl: photoUrl ?? this.photoUrl, // ✅ Added
     );
   }
 }

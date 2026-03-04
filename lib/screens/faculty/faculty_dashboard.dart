@@ -4,6 +4,8 @@ import '../../theme/app_text_styles.dart';
 import 'home_page.dart';
 import 'research_page.dart';
 import 'fdb_selection_page.dart';
+import 'package:provider/provider.dart';
+import '../../providers/auth_provider.dart';
 
 class FacultyDashboard extends StatefulWidget {
   const FacultyDashboard({super.key});
@@ -28,21 +30,34 @@ class _FacultyDashboardState extends State<FacultyDashboard> {
       appBar: AppBar(
         title: const Text('Research CSE'),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.notifications_outlined),
-            onPressed: () {},
-          ),
-          IconButton(
-            icon: const Icon(Icons.settings_outlined),
-            onPressed: () {},
-          ),
-          const CircleAvatar(
-            radius: 16,
-            backgroundColor: AppColors.academicBlue,
-            child: Icon(Icons.person, size: 20, color: Colors.white),
-          ),
-          const SizedBox(width: 16),
-        ],
+  IconButton(
+    icon: const Icon(Icons.notifications_outlined),
+    onPressed: () {},
+  ),
+  IconButton(
+    icon: const Icon(Icons.settings_outlined),
+    onPressed: () {},
+  ),
+
+  Consumer<AuthProvider>(
+    builder: (context, authProvider, child) {
+    final photoUrl = authProvider.userModel?.profilePictureURL;
+
+      return CircleAvatar(
+        radius: 16,
+        backgroundColor: AppColors.academicBlue,
+        backgroundImage: photoUrl != null && photoUrl.isNotEmpty
+            ? NetworkImage(photoUrl)
+            : null,
+        child: photoUrl == null || photoUrl.isEmpty
+            ? const Icon(Icons.person, size: 20, color: Colors.white)
+            : null,
+      );
+    },
+  ),
+
+  const SizedBox(width: 16),
+],
       ),
       body: LayoutBuilder(
         builder: (context, constraints) {

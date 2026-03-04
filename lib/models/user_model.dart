@@ -20,20 +20,23 @@ class UserModel {
   });
 
   // Factory constructor for creating a UserModel from Firestore document
-  factory UserModel.fromFirestore(DocumentSnapshot doc) {
-    Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
-    return UserModel(
-      uid: doc.id,
-      email: data['email'] ?? '',
-      phoneNumber: data['phoneNumber'],
-      role: data['role'] ?? 'faculty',
-      createdAt: (data['createdAt'] as Timestamp).toDate(),
-      lastLogin: data['lastLogin'] != null
-          ? (data['lastLogin'] as Timestamp).toDate()
-          : null,
-      profilePictureURL: data['profilePictureURL'],
-    );
-  }
+ factory UserModel.fromFirestore(DocumentSnapshot doc) {
+  Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+  return UserModel(
+    uid: doc.id,
+    email: data['email'] ?? '',
+    phoneNumber: data['phoneNumber'],
+    role: data['role'] ?? 'faculty',
+    createdAt: (data['createdAt'] as Timestamp).toDate(),
+    lastLogin: data['lastLogin'] != null
+        ? (data['lastLogin'] as Timestamp).toDate()
+        : null,
+
+    // 🔥 FIXED LINE
+    profilePictureURL: data['photoUrl'],
+  );
+}
+
 
   // Convert UserModel to Map for Firestore
   Map<String, dynamic> toMap() {
@@ -43,7 +46,7 @@ class UserModel {
       'role': role,
       'createdAt': Timestamp.fromDate(createdAt),
       'lastLogin': lastLogin != null ? Timestamp.fromDate(lastLogin!) : null,
-      'profilePictureURL': profilePictureURL,
+      'photoUrl': profilePictureURL,
     };
   }
 

@@ -73,35 +73,33 @@ class ProfilePictureWidget extends StatelessWidget {
   }
 
   Widget _buildImage() {
-    if (imageBytes != null) {
-      return Image.memory(
-        imageBytes!,
-        fit: BoxFit.cover,
-        width: size,
-        height: size,
-      );
-    }
-
-    if (imageUrl != null && imageUrl!.isNotEmpty) {
-      return CachedNetworkImage(
-        imageUrl: imageUrl!,
-        fit: BoxFit.cover,
-        width: size,
-        height: size,
-        placeholder: (context, url) => Container(
-          color: Colors.grey[200],
-          child: const Center(
-            child: CircularProgressIndicator(
-              strokeWidth: 2,
-            ),
-          ),
-        ),
-        errorWidget: (context, url, error) => _buildPlaceholder(),
-      );
-    }
-
-    return _buildPlaceholder();
+  if (imageBytes != null) {
+    return Image.memory(
+      imageBytes!,
+      fit: BoxFit.cover,
+      width: size,
+      height: size,
+    );
   }
+
+  if (imageUrl != null && imageUrl!.isNotEmpty) {
+    return CachedNetworkImage(
+      imageUrl: imageUrl!,
+      fit: BoxFit.cover,
+      width: size,
+      height: size,
+      placeholder: (context, url) => Container(
+        color: Colors.grey[200],
+        child: const Center(
+          child: CircularProgressIndicator(strokeWidth: 2),
+        ),
+      ),
+      errorWidget: (context, url, error) => _buildPlaceholder(),
+    );
+  }
+
+  return _buildPlaceholder();
+}
 
   Widget _buildPlaceholder() {
     return Container(

@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
-
-import '../../../theme/app_colors.dart';
-import '../../../theme/app_text_styles.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class FdbVerificationPage extends StatelessWidget {
   const FdbVerificationPage({super.key});
@@ -9,140 +7,209 @@ class FdbVerificationPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.offWhite,
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(32),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Icon
-              Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: AppColors.academicBlue.withOpacity(0.08),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.school_outlined,
-                  size: 56,
-                  color: AppColors.academicBlue,
-                ),
-              ),
+      backgroundColor: const Color(0xFFF5F7FA),
+      appBar: AppBar(
+        title: const Text(
+          "FDB & Certificate Verification",
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        centerTitle: true,
+        backgroundColor: Colors.indigo,
+        foregroundColor: Colors.white,
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(20),
+        child: StreamBuilder<QuerySnapshot>(
+          stream: FirebaseFirestore.instance
+              .collection('fdb_datum')
+              .where('status', isEqualTo: 'pending')
+              .snapshots(),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState ==
+                ConnectionState.waiting) {
+              return const Center(
+                  child: CircularProgressIndicator());
+            }
 
-              const SizedBox(height: 24),
-
-              // Title
-              Text(
-                'FDB & Certificate Verification',
-                style: AppTextStyles.h3,
-                textAlign: TextAlign.center,
-              ),
-
-              const SizedBox(height: 12),
-
-              // Description
-              Text(
-                'Admin verification of faculty development activities\n'
-                'including FDPs, workshops, certifications\n'
-                'and other academic training programs.',
-                style: AppTextStyles.bodyRegular
-                    .copyWith(color: AppColors.mediumGray),
-                textAlign: TextAlign.center,
-              ),
-
-              const SizedBox(height: 32),
-
-              // Info Card
-              Container(
-                constraints: const BoxConstraints(maxWidth: 520),
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: AppColors.pureWhite,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppColors.divider),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: const [
-                    _InfoRow(
-                      icon: Icons.badge_outlined,
-                      text:
-                          'Verification applies to FDPs, workshops and certificates',
-                    ),
-                    SizedBox(height: 12),
-                    _InfoRow(
-                      icon: Icons.calendar_today_outlined,
-                      text:
-                          'Activities can be verified year-wise and category-wise',
-                    ),
-                    SizedBox(height: 12),
-                    _InfoRow(
-                      icon: Icons.verified_user_outlined,
-                      text:
-                          'Only Admin users can verify or reject submissions',
-                    ),
-                    SizedBox(height: 12),
-                    _InfoRow(
-                      icon: Icons.visibility_outlined,
-                      text:
-                          'Verification status is visible to faculty as read-only',
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 40),
-
-              // Coming Soon Label
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                decoration: BoxDecoration(
-                  color: AppColors.academicBlue.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(20),
-                ),
+            if (!snapshot.hasData ||
+                snapshot.data!.docs.isEmpty) {
+              return const Center(
                 child: Text(
-                  'FDB verification workflow coming next',
-                  style: AppTextStyles.label
-                      .copyWith(color: AppColors.academicBlue),
+                  "No pending verifications 🎉",
+                  style: TextStyle(fontSize: 16),
                 ),
-              ),
-            ],
-          ),
+              );
+            }
+
+            var docs = snapshot.data!.docs;
+
+            return ListView.builder(
+              itemCount: docs.length,
+              itemBuilder: (context, index) {
+                var doc = docs[index];
+                final data =
+                    doc.data() as Map<String, dynamic>;
+
+                return Card(
+                  margin:
+                      const EdgeInsets.only(bottom: 20),
+                  elevation: 4,
+                  shape: RoundedRectangleBorder(
+                    borderRadius:
+                        BorderRadius.circular(12),
+                  ),
+                  child: Padding(
+                    padding:
+                        const EdgeInsets.all(15),
+                    child: Column(
+                      crossAxisAlignment:
+                          CrossAxisAlignment.start,
+                      children: [
+
+                        Text(
+                          "Faculty: ${data['name'] ?? ''}",
+                          style: const TextStyle(
+                            fontWeight:
+                                FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                        ),
+
+                        const SizedBox(height: 8),
+
+                        Text("Title: ${data['title'] ?? ''}"),
+                        Text("Organization: ${data['organization'] ?? ''}"),
+                        Text("Duration: ${data['duration'] ?? ''}"),
+
+                        const SizedBox(height: 12),
+
+                        /// 🔥 FIXED CERTIFICATE IMAGE
+                        if (data['photoUrl'] != null &&
+                            data['photoUrl']
+                                .toString()
+                                .isNotEmpty)
+                          Builder(
+                            builder: (context) {
+                              final String fileId =
+                                  data['photoUrl'];
+
+                              final String imageUrl =
+                                  "https://drive.google.com/uc?export=view&id=$fileId";
+
+                              return GestureDetector(
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) =>
+                                          FullImageView(
+                                              imageUrl:
+                                                  imageUrl),
+                                    ),
+                                  );
+                                },
+                                child: ClipRRect(
+                                  borderRadius:
+                                      BorderRadius
+                                          .circular(10),
+                                  child: Image.network(
+                                    imageUrl,
+                                    height: 170,
+                                    width:
+                                        double.infinity,
+                                    fit: BoxFit.cover,
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+
+                        const SizedBox(height: 15),
+
+                        Row(
+                          mainAxisAlignment:
+                              MainAxisAlignment.end,
+                          children: [
+
+                            /// APPROVE
+                            ElevatedButton.icon(
+                              style:
+                                  ElevatedButton.styleFrom(
+                                backgroundColor:
+                                    Colors.green,
+                              ),
+                              onPressed: () async {
+                                await FirebaseFirestore
+                                    .instance
+                                    .collection(
+                                        'fdb_datum')
+                                    .doc(doc.id)
+                                    .update({
+                                  'status': 'approved',
+                                });
+                              },
+                              icon: const Icon(Icons.check),
+                              label:
+                                  const Text("Approve"),
+                            ),
+
+                            const SizedBox(width: 10),
+
+                            /// REJECT
+                            ElevatedButton.icon(
+                              style:
+                                  ElevatedButton.styleFrom(
+                                backgroundColor:
+                                    Colors.red,
+                              ),
+                              onPressed: () async {
+                                await FirebaseFirestore
+                                    .instance
+                                    .collection(
+                                        'fdb_datum')
+                                    .doc(doc.id)
+                                    .update({
+                                  'status': 'rejected',
+                                });
+                              },
+                              icon: const Icon(Icons.close),
+                              label:
+                                  const Text("Reject"),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            );
+          },
         ),
       ),
     );
   }
 }
 
-/* =======================================================
-   🔹 SMALL INFO ROW WIDGET
-   ======================================================= */
+/// 🔥 FULL SCREEN ZOOM VIEW
+class FullImageView extends StatelessWidget {
+  final String imageUrl;
 
-class _InfoRow extends StatelessWidget {
-  final IconData icon;
-  final String text;
-
-  const _InfoRow({
-    required this.icon,
-    required this.text,
-  });
+  const FullImageView({required this.imageUrl});
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Icon(icon, size: 18, color: AppColors.academicBlue),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Text(
-            text,
-            style: AppTextStyles.bodySmall,
-          ),
+    return Scaffold(
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        backgroundColor: Colors.black,
+        foregroundColor: Colors.white,
+      ),
+      body: Center(
+        child: InteractiveViewer(
+          child: Image.network(imageUrl),
         ),
-      ],
+      ),
     );
   }
 }

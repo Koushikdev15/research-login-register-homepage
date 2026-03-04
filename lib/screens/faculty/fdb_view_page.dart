@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:pdf/pdf.dart';
 import 'package:printing/printing.dart';
+import 'fdb_add_page.dart';
 
 class FdbViewPage extends StatefulWidget {
   final String? overrideEmail;
@@ -309,23 +310,30 @@ await Printing.layoutPdf(
               Map<int, Map<String, List<Map<String, dynamic>>>> groupedData = {};
 
               for (var doc in docs) {
-                final data = doc.data();
-                final startDate =
-                    (data['startDate'] as Timestamp?)?.toDate();
-                if (startDate == null) continue;
+  final data = doc.data();
 
-                int year = startDate.year;
-                String type = data['type'] ?? "Unknown";
+  final startDate =
+      (data['startDate'] as Timestamp?)?.toDate();
+  if (startDate == null) continue;
 
-                if (selectedTypes.isNotEmpty &&
-                    !selectedTypes.contains(type)) {
-                  continue;
-                }
+  int year = startDate.year;
+  String type = data['type'] ?? "Unknown";
 
-                groupedData.putIfAbsent(year, () => {});
-                groupedData[year]!.putIfAbsent(type, () => []);
-                groupedData[year]![type]!.add(data);
-              }
+  if (selectedTypes.isNotEmpty &&
+      !selectedTypes.contains(type)) {
+    continue;
+  }
+
+  // 🔥 Attach document ID
+  final record = {
+    ...data,
+    'docId': doc.id,
+  };
+
+  groupedData.putIfAbsent(year, () => {});
+  groupedData[year]!.putIfAbsent(type, () => []);
+  groupedData[year]![type]!.add(record);
+}
 
               int overallTotal = groupedData.values
                   .fold(0, (sum, typeMap) =>
@@ -449,183 +457,253 @@ await Printing.layoutPdf(
                                     (data['endDate'] as Timestamp?)
                                         ?.toDate();
 
-                                return Container(
-                                  margin:
-                                      const EdgeInsets.only(bottom: 16),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    borderRadius:
-                                        BorderRadius.circular(16),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.black
-                                            .withOpacity(0.05),
-                                        blurRadius: 10,
-                                        offset:
-                                            const Offset(0, 4),
-                                      ),
-                                    ],
-                                  ),
-                                  child: ClipRRect(
-                                    borderRadius:
-                                        BorderRadius.circular(16),
-                                    child: IntrinsicHeight(
-                                      child: Row(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.stretch,
-                                        children: [
-                                          Container(
-                                              width: 6,
-                                              color:
-                                                  Colors.indigo),
-                                          Expanded(
-                                            child: Padding(
-                                              padding:
-                                                  const EdgeInsets
-                                                      .all(16),
-                                              child: Column(
-                                                crossAxisAlignment:
-                                                    CrossAxisAlignment
-                                                        .start,
-                                                children: [
+                               return Container(
+  margin: const EdgeInsets.only(bottom: 16),
+  decoration: BoxDecoration(
+    color: Colors.white,
+    borderRadius: BorderRadius.circular(16),
+    boxShadow: [
+      BoxShadow(
+        color: Colors.black.withOpacity(0.05),
+        blurRadius: 10,
+        offset: const Offset(0, 4),
+      ),
+    ],
+  ),
+  child: ClipRRect(
+    borderRadius: BorderRadius.circular(16),
+    child: IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Container(
+            width: 6,
+            color: Colors.indigo,
+          ),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
 
-                                                  Row(
-                                                    mainAxisAlignment:
-                                                        MainAxisAlignment
-                                                            .spaceBetween,
-                                                    children: [
-                                                      Expanded(
-                                                        child:
-                                                            Text(
-                                                          data['title'] ??
-                                                              '',
-                                                          style:
-                                                              const TextStyle(
-                                                            fontSize:
-                                                                18,
-                                                            fontWeight:
-                                                                FontWeight
-                                                                    .bold,
-                                                            color:
-                                                                Color(
-                                                                    0xFF2D3142),
-                                                          ),
-                                                        ),
-                                                      ),
-                                                      Container(
-                                                        padding:
-                                                            const EdgeInsets
-                                                                .symmetric(
-                                                                horizontal:
-                                                                    8,
-                                                                vertical:
-                                                                    4),
-                                                        decoration:
-                                                            BoxDecoration(
-                                                          color: Colors
-                                                              .indigo
-                                                              .withOpacity(
-                                                                  0.1),
-                                                          borderRadius:
-                                                              BorderRadius.circular(
-                                                                  8),
-                                                        ),
-                                                        child: Text(
-                                                          data['type'] ??
-                                                              'N/A',
-                                                          style:
-                                                              const TextStyle(
-                                                            fontSize:
-                                                                12,
-                                                            color:
-                                                                Colors.indigo,
-                                                            fontWeight:
-                                                                FontWeight.bold,
-                                                          ),
-                                                        ),
-                                                      ),
-                                                    ],
-                                                  ),
-                                                  const Divider(
-                                                      height: 24),
-                                                  _buildInfoRow(
-                                                      Icons.business,
-                                                      'Organization',
-                                                      data['organization'] ??
-                                                          'N/A'),
-                                                  const SizedBox(
-                                                      height: 8),
-                                                  _buildInfoRow(
-                                                      Icons.timer_outlined,
-                                                      'Duration',
-                                                      data['duration'] ??
-                                                          'N/A'),
-                                                  const SizedBox(
-                                                      height: 8),
-                                                  if (startDate != null &&
-                                                      endDate != null)
-                                                    _buildInfoRow(
-                                                      Icons
-                                                          .calendar_month_outlined,
-                                                      'Period',
-                                                      '${DateFormat('dd MMM yyyy').format(startDate)} - ${DateFormat('dd MMM yyyy').format(endDate)}',
-                                                    ),
-                                                    // 🔥 Certificate Image Preview
-// 🔥 Certificate Image Preview (Google Drive FIX)
-if (data['photoUrl'] != null &&
-    data['photoUrl'].toString().isNotEmpty)
-  Padding(
-    padding: const EdgeInsets.only(top: 12),
-    child: Builder(
-      builder: (context) {
+                  /// TITLE ROW
+                 Row(
+  children: [
 
-        final String fileId = data['photoUrl'];
-        final String imageUrl =
-            "https://drive.google.com/uc?export=view&id=$fileId";
+    /// TITLE
+    Expanded(
+      child: Text(
+        data['title'] ?? '',
+        style: const TextStyle(
+          fontSize: 18,
+          fontWeight: FontWeight.bold,
+          color: Color(0xFF2D3142),
+        ),
+      ),
+    ),
 
-        return GestureDetector(
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => _FullImageView(
-                  imageUrl: imageUrl,
-                ),
+    /// TYPE BADGE
+    Container(
+      margin: const EdgeInsets.only(right: 8),
+      padding: const EdgeInsets.symmetric(
+        horizontal: 8,
+        vertical: 4,
+      ),
+      decoration: BoxDecoration(
+        color: Colors.indigo.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text(
+        data['type'] ?? 'N/A',
+        style: const TextStyle(
+          fontSize: 12,
+          color: Colors.indigo,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    ),
+
+    /// STATUS BADGE
+    Container(
+      margin: const EdgeInsets.only(right: 8),
+      padding: const EdgeInsets.symmetric(
+        horizontal: 8,
+        vertical: 4,
+      ),
+      decoration: BoxDecoration(
+        color: (data['status'] == 'approved')
+            ? Colors.green
+            : (data['status'] == 'rejected')
+                ? Colors.red
+                : Colors.orange,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text(
+        (data['status'] == 'approved')
+            ? "VERIFIED"
+            : (data['status'] == 'rejected')
+                ? "REJECTED"
+                : "PENDING",
+        style: const TextStyle(
+          fontSize: 12,
+          color: Colors.white,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    ),
+
+    /// 🔥 3 DOT MENU (Now outside nested Row)
+    IconButton(
+  icon: const Icon(Icons.more_vert),
+  onPressed: () async {
+    final selected = await showMenu<String>(
+      context: context,
+      position: const RelativeRect.fromLTRB(1000, 200, 0, 0),
+      items: const [
+        PopupMenuItem(
+          value: 'edit',
+          child: Text('Edit'),
+        ),
+        PopupMenuItem(
+          value: 'delete',
+          child: Text('Delete'),
+        ),
+      ],
+    );
+
+    final docId = data['docId'];
+
+    if (selected == 'edit') {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => FdbAddPage(
+            isEdit: true,
+            docId: docId,
+            existingData: data,
+          ),
+        ),
+      );
+    }
+
+    if (selected == 'delete') {
+      final confirm = await showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text("Delete Record"),
+          content: const Text(
+              "Are you sure you want to delete this record?"),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text("Cancel"),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text(
+                "Delete",
+                style: TextStyle(color: Colors.red),
               ),
-            );
-          },
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(12),
-            child: Image.network(
-              imageUrl,
-              height: 160,
-              width: double.infinity,
-              fit: BoxFit.cover,
-              loadingBuilder: (context, child, progress) {
-                if (progress == null) return child;
-                return const Center(
-                  child: CircularProgressIndicator(),
-                );
-              },
-              errorBuilder: (context, error, stackTrace) =>
-                  const Text("Image not available"),
+            ),
+          ],
+        ),
+      );
+
+      if (confirm == true) {
+        await FirebaseFirestore.instance
+            .collection('fdb_datum')
+            .doc(docId)
+            .delete();
+      }
+    }
+  },
+),
+  ],
+),
+
+
+                  const Divider(height: 24),
+
+                  _buildInfoRow(
+                    Icons.business,
+                    'Organization',
+                    data['organization'] ?? 'N/A',
+                  ),
+
+                  const SizedBox(height: 8),
+
+                  _buildInfoRow(
+                    Icons.timer_outlined,
+                    'Duration',
+                    data['duration'] ?? 'N/A',
+                  ),
+
+                  const SizedBox(height: 8),
+
+                  if (startDate != null &&
+                      endDate != null)
+                    _buildInfoRow(
+                      Icons.calendar_month_outlined,
+                      'Period',
+                      '${DateFormat('dd MMM yyyy').format(startDate)} - ${DateFormat('dd MMM yyyy').format(endDate)}',
+                    ),
+
+                  /// CERTIFICATE IMAGE
+                  if (data['photoUrl'] != null &&
+                      data['photoUrl']
+                          .toString()
+                          .isNotEmpty)
+                    Padding(
+                      padding:
+                          const EdgeInsets.only(
+                              top: 12),
+                      child: Builder(
+                        builder: (context) {
+                          final String fileId =
+                              data['photoUrl'];
+
+                          final String imageUrl =
+                              "https://drive.google.com/uc?export=view&id=$fileId";
+
+                          return GestureDetector(
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) =>
+                                      _FullImageView(
+                                    imageUrl:
+                                        imageUrl,
+                                  ),
+                                ),
+                              );
+                            },
+                            child: ClipRRect(
+                              borderRadius:
+                                  BorderRadius
+                                      .circular(12),
+                              child: Image.network(
+                                imageUrl,
+                                height: 160,
+                                width:
+                                    double.infinity,
+                                fit: BoxFit.cover,
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                ],
+              ),
             ),
           ),
-        );
-      },
+        ],
+      ),
     ),
   ),
-
-
-                                                ],
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                );
+);
                               }).toList(),
                             );
                           }).toList(),

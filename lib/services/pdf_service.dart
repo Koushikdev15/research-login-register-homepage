@@ -11,14 +11,17 @@ import '../services/orcid_service.dart';
 
 class PDFService {
 
-
-
-  
 static Future<void> generateFacultyPDF(
     FacultyProfile faculty) async {
 
   try {
     final pdf = pw.Document();
+
+    // 🔹 Load College Logo
+    final logoBytes =
+        await rootBundle.load('assets/images/college_logo.png');
+    final logoImage =
+        pw.MemoryImage(logoBytes.buffer.asUint8List());
 
     final researchData =
         await _prepareResearchData(faculty);
@@ -43,36 +46,52 @@ static Future<void> generateFacultyPDF(
       pw.MultiPage(
         pageFormat: PdfPageFormat.a4,
         margin: const pw.EdgeInsets.all(32),
-        maxPages: 200,
         footer: (context) => pw.Container(
           alignment: pw.Alignment.centerRight,
           child: pw.Text(
             'Page ${context.pageNumber} of ${context.pagesCount}',
             style: const pw.TextStyle(
-                fontSize: 9,
-                color: PdfColors.grey),
+              fontSize: 9,
+              color: PdfColors.grey,
+            ),
           ),
         ),
         build: (context) => [
-          _buildHeader(faculty, profileImage),
+
+          // 🔥 UPDATED HEADER
+          _buildHeader(
+            faculty,
+            profileImage,
+            logoImage,
+          ),
+
           pw.SizedBox(height: 20),
+
           _buildSectionHeader('Personal Information'),
           _buildPersonalInfoTable(faculty),
+
           pw.SizedBox(height: 20),
+
           _buildSectionHeader('Research IDs'),
           _buildResearchIDsTable(faculty),
+
           pw.SizedBox(height: 20),
+
           _buildSectionHeader('Work Experience'),
           _buildWorkExperienceList(faculty),
-          pw.SizedBox(height: 10),
-          _buildCITExperience(faculty),
+
           pw.SizedBox(height: 20),
+
           _buildSectionHeader('Educational Qualification'),
           _buildEducationTable(faculty),
+
           pw.SizedBox(height: 20),
+
           _buildSectionHeader('Research Publications'),
-..._buildResearchSection(researchData),
+          ..._buildResearchSection(researchData),
+
           pw.SizedBox(height: 20),
+
           _buildSectionHeader('FDP & Certifications'),
           _buildFdbSection(fdbData),
         ],
@@ -101,56 +120,160 @@ static Future<void> generateFacultyPDF(
     await generateFacultyPDF(faculty);
   }
 
-  static pw.Widget _buildHeader(FacultyProfile faculty, pw.ImageProvider? profileImage) {
-    return pw.Row(
-      crossAxisAlignment: pw.CrossAxisAlignment.start,
-      children: [
-        if (profileImage != null)
-          pw.Container(
+  static pw.Widget _buildHeader(
+  FacultyProfile faculty,
+  pw.ImageProvider? profileImage,
+  pw.ImageProvider logoImage,
+) {
+  return pw.Column(
+    crossAxisAlignment: pw.CrossAxisAlignment.start,
+    children: [
+
+      // ===============================
+      // 🏫 COLLEGE LETTERHEAD SECTION
+      // ===============================
+      pw.Row(
+        crossAxisAlignment: pw.CrossAxisAlignment.center,
+        children: [
+
+          // 🔹 College Logo
+          pw.Image(
+            logoImage,
             width: 80,
             height: 80,
-            decoration: pw.BoxDecoration(
-              shape: pw.BoxShape.circle,
-              image: pw.DecorationImage(image: profileImage, fit: pw.BoxFit.cover),
-            ),
-          )
-        else
-          pw.Container(
-            width: 80,
-            height: 80,
-            decoration: const pw.BoxDecoration(
-              color: PdfColors.grey200,
-              shape: pw.BoxShape.circle,
-            ),
-            child: pw.Center(child: pw.Text(faculty.personalInfo.name[0], style: const pw.TextStyle(fontSize: 32))),
           ),
-        pw.SizedBox(width: 20),
-        pw.Expanded(
-          child: pw.Column(
-            crossAxisAlignment: pw.CrossAxisAlignment.start,
-            children: [
-              pw.Text(
-                faculty.personalInfo.name,
-                style: pw.TextStyle(
-                  fontSize: 24,
-                  fontWeight: pw.FontWeight.bold,
-                  color: PdfColors.blue900,
+
+          pw.SizedBox(width: 15),
+
+          // 🔹 College Details
+          pw.Expanded(
+            child: pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.Text(
+                  "CHENNAI INSTITUTE OF TECHNOLOGY",
+                  style: pw.TextStyle(
+                    fontSize: 19,
+                    fontWeight: pw.FontWeight.bold,
+                    color: PdfColors.blue900,
+                  ),
                 ),
-              ),
-              pw.Text(
-                '${faculty.personalInfo.designation} - ${faculty.personalInfo.department}',
-                style: const pw.TextStyle(fontSize: 16),
-              ),
-              pw.Text(
-                faculty.personalInfo.mailId,
-                style: const pw.TextStyle(fontSize: 14, color: PdfColors.grey700),
-              ),
-            ],
+                pw.Text(
+                  "(Autonomous)",
+                  style: pw.TextStyle(
+                    fontSize: 12,
+                    fontStyle: pw.FontStyle.italic,
+                  ),
+                ),
+                pw.SizedBox(height: 2),
+                pw.Text(
+                  "Department of Computer Science and Engineering",
+                  style: pw.TextStyle(
+                    fontSize: 13,
+                    fontWeight: pw.FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
           ),
-        ),
-      ],
-    );
-  }
+        ],
+      ),
+
+      pw.SizedBox(height: 10),
+      pw.Divider(thickness: 1.5),
+
+      pw.SizedBox(height: 20),
+
+      // ===============================
+      // 👤 FACULTY PROFILE SECTION
+      // ===============================
+      pw.Row(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+
+          // 🔹 Faculty Photo
+          pw.Container(
+            width: 110,
+            height: 130,
+            decoration: pw.BoxDecoration(
+              border: pw.Border.all(
+                color: PdfColors.grey600,
+                width: 1,
+              ),
+              image: profileImage != null
+                  ? pw.DecorationImage(
+                      image: profileImage,
+                      fit: pw.BoxFit.cover,
+                    )
+                  : null,
+            ),
+            child: profileImage == null
+                ? pw.Center(
+                    child: pw.Text(
+                      faculty.personalInfo.name.isNotEmpty
+                          ? faculty.personalInfo.name[0]
+                          : '',
+                      style: pw.TextStyle(
+                        fontSize: 40,
+                        fontWeight: pw.FontWeight.bold,
+                      ),
+                    ),
+                  )
+                : null,
+          ),
+
+          pw.SizedBox(width: 25),
+
+          // 🔹 Faculty Details
+          pw.Expanded(
+            child: pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+
+                pw.Text(
+                  faculty.personalInfo.name,
+                  style: pw.TextStyle(
+                    fontSize: 22,
+                    fontWeight: pw.FontWeight.bold,
+                    color: PdfColors.black,
+                  ),
+                ),
+
+                pw.SizedBox(height: 8),
+
+                pw.Text(
+                  faculty.personalInfo.designation,
+                  style: pw.TextStyle(fontSize: 14),
+                ),
+
+                pw.Text(
+                  faculty.personalInfo.department,
+                  style: pw.TextStyle(fontSize: 14),
+                ),
+
+                pw.SizedBox(height: 6),
+
+                pw.Text(
+                  "Email: ${faculty.personalInfo.mailId}",
+                  style: pw.TextStyle(fontSize: 12),
+                ),
+
+                pw.Text(
+                  "Contact: ${faculty.personalInfo.contactNo}",
+                  style: pw.TextStyle(fontSize: 12),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+
+      pw.SizedBox(height: 20),
+      pw.Divider(thickness: 1.5),
+    ],
+  );
+}
+
 
   static pw.Widget _buildSectionHeader(String title) {
     return pw.Container(
@@ -299,39 +422,31 @@ static pw.Widget _buildRedHeader(
   );
 }
 
-static pw.Widget _buildResearchTypeBlock(
+static List<pw.Widget> _buildResearchTypeBlock(
   String type,
   List<WorkItem> works,
   bool isVerifiedSection,
 ) {
+  if (works.isEmpty) return [];
 
-  if (works.isEmpty)
-    return pw.SizedBox();
-
-  return pw.Column(
-    crossAxisAlignment:
-        pw.CrossAxisAlignment.start,
-    children: [
-      pw.SizedBox(height: 10),
-
-      pw.Text(
-        _typeLabel(type),
-        style: pw.TextStyle(
-          fontSize: 12,
-          fontWeight: pw.FontWeight.bold,
-        ),
+  return [
+    pw.SizedBox(height: 10),
+    pw.Text(
+      _typeLabel(type),
+      style: pw.TextStyle(
+        fontSize: 12,
+        fontWeight: pw.FontWeight.bold,
       ),
-
-      pw.SizedBox(height: 6),
-
-      _buildResearchTable(
-        type,
-        works,
-        isVerifiedSection,
-      ),
-    ],
-  );
+    ),
+    pw.SizedBox(height: 6),
+    _buildResearchTable(
+      type,
+      works,
+      isVerifiedSection,
+    ),
+  ];
 }
+
 
 static String _identifierColumnName(String type) {
   switch (type) {
@@ -451,13 +566,14 @@ if (verified.isNotEmpty) {
   widgets.add(pw.SizedBox(height: 8));
 
   for (var entry in verified.entries) {
-    widgets.add(
-      _buildResearchTypeBlock(
-        entry.key,
-        entry.value,
-        true,
-      ),
-    );
+widgets.addAll(
+  _buildResearchTypeBlock(
+    entry.key,
+    entry.value,
+    true,
+  ),
+);
+
   }
 }
 
@@ -467,13 +583,14 @@ if (nonVerified.isNotEmpty) {
   widgets.add(pw.SizedBox(height: 8));
 
   for (var entry in nonVerified.entries) {
-    widgets.add(
-      _buildResearchTypeBlock(
-        entry.key,
-        entry.value,
-        false,
-      ),
-    );
+widgets.addAll(
+  _buildResearchTypeBlock(
+    entry.key,
+    entry.value,
+    true,
+  ),
+);
+
   }
 }
 

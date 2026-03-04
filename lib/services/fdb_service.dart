@@ -27,18 +27,19 @@ class FdbService {
       throw Exception('User not logged in');
     }
 
-    await _firestore.collection(_collection).add({
-      'title': title,
-      'organization': organization,
-      'duration': duration,
-      'type': type,
-      'email': user.email,
-      'name': name,
-      'photoUrl': photoUrl ?? '',
-      'startDate': Timestamp.fromDate(startDate),
-      'endDate': Timestamp.fromDate(endDate),
-      'createdAt': FieldValue.serverTimestamp(),
-    });
+   await _firestore.collection(_collection).add({
+  'title': title,
+  'organization': organization,
+  'duration': duration,
+  'type': type,
+  'email': user.email,
+  'name': name,
+  'photoUrl': photoUrl ?? '',
+  'startDate': Timestamp.fromDate(startDate),
+  'endDate': Timestamp.fromDate(endDate),
+  'createdAt': FieldValue.serverTimestamp(),
+  'status': 'pending',
+});
   }
 
   /// =========================================================

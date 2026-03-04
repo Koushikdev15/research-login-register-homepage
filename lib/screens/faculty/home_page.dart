@@ -5,7 +5,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../services/faculty_service.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/faculty_provider.dart';
-//import '../../services/storage_service.dart';
 import '../../services/orcid_service.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_text_styles.dart';
@@ -182,6 +181,156 @@ void initState() {
   }
 }
 
+ void _showAvatarOptions() {
+  final authProvider =
+      Provider.of<AuthProvider>(context, listen: false);
+
+  final photoUrl = authProvider.userModel?.profilePictureURL;
+  final hasPhoto = photoUrl != null && photoUrl.isNotEmpty;
+
+  showModalBottomSheet(
+    context: context,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+    ),
+    builder: (context) {
+      return SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 16),
+            const Text(
+              "Profile Picture",
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            /// 👁 VIEW
+            ListTile(
+              leading: const Icon(Icons.visibility),
+              title: const Text("View"),
+              enabled: hasPhoto,
+              onTap: hasPhoto
+                  ? () {
+                      Navigator.pop(context);
+                      _viewProfilePicture();
+                    }
+                  : null,
+            ),
+
+            /// ✏ EDIT
+            ListTile(
+              leading: const Icon(Icons.edit),
+              title: const Text("Edit"),
+              onTap: () {
+                Navigator.pop(context);
+                _updateProfilePicture();
+              },
+            ),
+
+            /// 🗑 DELETE
+            ListTile(
+              leading: const Icon(Icons.delete, color: Colors.red),
+              title: const Text(
+                "Delete",
+                style: TextStyle(color: Colors.red),
+              ),
+              enabled: hasPhoto,
+              onTap: hasPhoto
+                  ? () {
+                      Navigator.pop(context);
+                      _deleteProfilePicture();
+                    }
+                  : null,
+            ),
+
+            const SizedBox(height: 16),
+          ],
+        ),
+      );
+    },
+  );
+}
+Future<void> _deleteProfilePicture() async {
+  try {
+    final authProvider =
+        Provider.of<AuthProvider>(context, listen: false);
+
+    final userId = authProvider.currentUserId;
+    if (userId == null) return;
+
+    /// 🔴 Confirmation Dialog
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Delete Profile Picture"),
+        content: const Text(
+            "Are you sure you want to remove your profile picture?"),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text("Cancel"),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text(
+              "Delete",
+              style: TextStyle(color: Colors.red),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    /// 🔥 Remove from Firestore
+    await authProvider.updateProfilePicture('');
+
+    await authProvider.refreshUserData();
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Profile picture deleted successfully!'),
+        backgroundColor: AppColors.successGreen,
+      ),
+    );
+  } catch (e) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Error: $e'),
+        backgroundColor: AppColors.errorRed,
+      ),
+    );
+  }
+}
+   void _viewProfilePicture() {
+  final authProvider =
+      Provider.of<AuthProvider>(context, listen: false);
+
+  final photoUrl = authProvider.userModel?.profilePictureURL;
+
+  if (photoUrl == null || photoUrl.isEmpty) return;
+
+  showDialog(
+    context: context,
+    builder: (context) {
+      return Dialog(
+        backgroundColor: Colors.transparent,
+        child: InteractiveViewer(
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: Image.network(photoUrl),
+          ),
+        ),
+      );
+    },
+  );
+}
+
  // ✅ GOOGLE DRIVE PROFILE PICTURE UPLOAD
   Future<void> _updateProfilePicture() async {
     try {
@@ -305,12 +454,14 @@ Card(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // 🔹 Profile Picture
-        ProfilePictureWidget(
-          imageUrl: user?.profilePictureURL,
-          size: 80,
-          showEditIcon: true,
-          onTap: _updateProfilePicture,
-        ),
+
+// 🔥 Convert Drive File ID to real image URL
+ProfilePictureWidget(
+  imageUrl: user?.profilePictureURL,
+  size: 80,
+  showEditIcon: true,
+  onTap: _showAvatarOptions,
+),
 
         const SizedBox(width: 24),
 

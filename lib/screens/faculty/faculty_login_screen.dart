@@ -137,145 +137,182 @@ class _FacultyLoginScreenState extends State<FacultyLoginScreen> {
      ======================================================= */
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.offWhite,
-      body: Center(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 480),
-            child: Card(
-              child: Padding(
-                padding: const EdgeInsets.all(40),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Center(
-                      child: Icon(Icons.school,
-                          size: 56, color: AppColors.academicBlue),
-                    ),
-                    const SizedBox(height: 16),
+Widget build(BuildContext context) {
+  final screenWidth = MediaQuery.of(context).size.width;
+  final isMobile = screenWidth < 600;
 
-                    Text(
-                      'Faculty Login',
-                      style: AppTextStyles.h2,
-                      textAlign: TextAlign.center,
-                    ),
-
-                    const SizedBox(height: 8),
-
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: AppColors.academicBlue.withOpacity(0.08),
-                        borderRadius: BorderRadius.circular(8),
+  return Scaffold(
+    backgroundColor: AppColors.offWhite,
+    body: LayoutBuilder(
+      builder: (context, constraints) {
+        return Center(
+          child: SingleChildScrollView(
+            padding: EdgeInsets.symmetric(
+              horizontal: isMobile ? 16 : 24,
+              vertical: 24,
+            ),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxWidth: isMobile ? double.infinity : 480,
+              ),
+              child: Card(
+                elevation: 4,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Padding(
+                  padding: EdgeInsets.all(isMobile ? 24 : 40),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      /* ================= ICON ================= */
+                      Center(
+                        child: Icon(
+                          Icons.school,
+                          size: isMobile ? 48 : 56,
+                          color: AppColors.academicBlue,
+                        ),
                       ),
-                      child: const Text(
-                        'You can register or login using Google or Email.',
+
+                      const SizedBox(height: 16),
+
+                      Text(
+                        'Faculty Login',
+                        style: AppTextStyles.h2,
                         textAlign: TextAlign.center,
                       ),
-                    ),
 
-                    const SizedBox(height: 24),
+                      const SizedBox(height: 8),
 
-                    /* ================= GOOGLE ================= */
-
-                    SizedBox(
-                      height: 48,
-                      child: ElevatedButton.icon(
-                        onPressed: _handleGoogleSignIn,
-                        icon: const Icon(Icons.public),
-                        label: const Text('Continue with Google'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.academicBlue,
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: AppColors.academicBlue.withOpacity(0.08),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Text(
+                          'You can register or login using Google or Email.',
+                          textAlign: TextAlign.center,
                         ),
                       ),
-                    ),
 
-                    const SizedBox(height: 24),
+                      const SizedBox(height: 24),
 
-                    /* ================= EMAIL LOGIN ================= */
+                      /* ================= GOOGLE ================= */
 
-                    ExpansionTile(
-                      title: const Text('Login with Email'),
-                      children: [
-                        Form(
-                          key: _formKey,
-                          child: Column(
-                            children: [
-                              TextFormField(
-                                controller: _emailController,
-                                validator: Validators.validateEmail,
-                                decoration: const InputDecoration(
-                                  labelText: 'Email',
-                                ),
-                              ),
-                              const SizedBox(height: 12),
-                              TextFormField(
-                                controller: _passwordController,
-                                obscureText: _obscurePassword,
-                                decoration: InputDecoration(
-                                  labelText: 'Password',
-                                  suffixIcon: IconButton(
-                                    icon: Icon(_obscurePassword
-                                        ? Icons.visibility_off
-                                        : Icons.visibility),
-                                    onPressed: () {
-                                      setState(() {
-                                        _obscurePassword = !_obscurePassword;
-                                      });
-                                    },
+                      SizedBox(
+                        height: 48,
+                        child: ElevatedButton.icon(
+                          onPressed: _handleGoogleSignIn,
+                          icon: const Icon(Icons.public),
+                          label: const Text('Continue with Google'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.academicBlue,
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(height: 24),
+
+                      /* ================= EMAIL LOGIN ================= */
+
+                      ExpansionTile(
+                        tilePadding: EdgeInsets.zero,
+                        childrenPadding: const EdgeInsets.only(top: 12),
+                        title: const Text('Login with Email'),
+                        children: [
+                          Form(
+                            key: _formKey,
+                            child: Column(
+                              crossAxisAlignment:
+                                  CrossAxisAlignment.stretch,
+                              children: [
+                                TextFormField(
+                                  controller: _emailController,
+                                  validator: Validators.validateEmail,
+                                  decoration: const InputDecoration(
+                                    labelText: 'Email',
                                   ),
                                 ),
-                              ),
-                              const SizedBox(height: 16),
-                              OutlinedButton(
-                                onPressed: _handleEmailLogin,
-                                child: const Text('Login with Email'),
-                              ),
-                            ],
+                                const SizedBox(height: 12),
+                                TextFormField(
+                                  controller: _passwordController,
+                                  obscureText: _obscurePassword,
+                                  decoration: InputDecoration(
+                                    labelText: 'Password',
+                                    suffixIcon: IconButton(
+                                      icon: Icon(
+                                        _obscurePassword
+                                            ? Icons.visibility_off
+                                            : Icons.visibility,
+                                      ),
+                                      onPressed: () {
+                                        setState(() {
+                                          _obscurePassword =
+                                              !_obscurePassword;
+                                        });
+                                      },
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 16),
+                                SizedBox(
+                                  height: 44,
+                                  child: OutlinedButton(
+                                    onPressed: _handleEmailLogin,
+                                    child:
+                                        const Text('Login with Email'),
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
-                      ],
-                    ),
+                        ],
+                      ),
 
-                    const SizedBox(height: 24),
+                      const SizedBox(height: 24),
 
-                    /* ================= REGISTER ================= */
+                      const Divider(),
+                      const SizedBox(height: 12),
 
-                    const Divider(),
-
-                    const SizedBox(height: 12),
-
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Text("Don't have an account? "),
-                        TextButton(
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) =>
-                                    const FacultyRegistrationScreen(),
-                              ),
-                            );
-                          },
-                          child: const Text(
-                            'Register Here',
-                            style: TextStyle(fontWeight: FontWeight.bold),
+                      Row(
+                        mainAxisAlignment:
+                            MainAxisAlignment.center,
+                        children: [
+                          const Flexible(
+                            child: Text(
+                              "Don't have an account? ",
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
-                        ),
-                      ],
-                    ),
-                  ],
+                          TextButton(
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) =>
+                                      const FacultyRegistrationScreen(),
+                                ),
+                              );
+                            },
+                            child: const Text(
+                              'Register Here',
+                              style: TextStyle(
+                                  fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
           ),
-        ),
-      ),
-    );
-  }
+        );
+      },
+    ),
+  );
+}
+
 }

@@ -185,7 +185,7 @@ class _FacultyCard extends StatelessWidget {
 
   // ================= AVATAR =================
 
-  Widget _buildAvatar() {
+ Widget _buildAvatar() {
     return CircleAvatar(
       radius: 40,
       backgroundColor: AppColors.lightGray,

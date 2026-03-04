@@ -8,7 +8,16 @@ import '../../services/drive_service.dart';
 import 'dart:io';
 
 class FdbAddPage extends StatefulWidget {
-  const FdbAddPage({super.key});
+  final bool isEdit;
+  final String? docId;
+  final Map<String, dynamic>? existingData;
+
+  const FdbAddPage({
+    super.key,
+    this.isEdit = false,
+    this.docId,
+    this.existingData,
+  });
 
   @override
   State<FdbAddPage> createState() => _FdbAddPageState();
@@ -53,10 +62,28 @@ class _FdbAddPageState extends State<FdbAddPage> {
   @override
   void initState() {
     super.initState();
+
     _titleController = TextEditingController();
     _organizationController = TextEditingController();
     _durationController = TextEditingController();
+
     _loadFacultyInfo();
+
+    // 🔥 PREFILL IF EDIT MODE
+    if (widget.isEdit && widget.existingData != null) {
+      final data = widget.existingData!;
+
+      _titleController.text = data['title'] ?? '';
+      _organizationController.text = data['organization'] ?? '';
+      _durationController.text = data['duration'] ?? '';
+      _selectedType = data['type'];
+      _certificateUrl = data['photoUrl'];
+
+      _startDate =
+          (data['startDate'] as Timestamp?)?.toDate();
+      _endDate =
+          (data['endDate'] as Timestamp?)?.toDate();
+    }
   }
 
   @override
@@ -94,7 +121,6 @@ class _FdbAddPageState extends State<FdbAddPage> {
     }
   }
 
-  // ✅ GOOGLE DRIVE UPLOAD (FIXED CORRECTLY)
   Future<void> _uploadCertificate() async {
     try {
       final result = await FilePicker.platform.pickFiles(
@@ -115,11 +141,10 @@ class _FdbAddPageState extends State<FdbAddPage> {
 
       final file = File(path);
 
-     final fileId = await _driveService.uploadFile(
-  file: file,
-  folderName: "fdb_certificates",
-);
-
+      final fileId = await _driveService.uploadFile(
+        file: file,
+        folderName: "fdb_certificates",
+      );
 
       if (fileId == null) {
         _showMsg("Upload failed");
@@ -128,7 +153,7 @@ class _FdbAddPageState extends State<FdbAddPage> {
       }
 
       setState(() {
-        _certificateUrl = fileId; // storing Drive file ID
+        _certificateUrl = fileId;
         _isUploading = false;
       });
 
@@ -140,21 +165,38 @@ class _FdbAddPageState extends State<FdbAddPage> {
   }
 
   Future<void> _saveFdb() async {
-    if (!_formKey.currentState!.validate()) return;
+  if (!_formKey.currentState!.validate()) return;
 
-    if (_startDate == null || _endDate == null) {
-      _showMsg("Select start and end dates");
-      return;
-    }
+  if (_startDate == null || _endDate == null) {
+    _showMsg("Select start and end dates");
+    return;
+  }
 
-    if (_selectedType == null) {
-      _showMsg("Select type");
-      return;
-    }
+  if (_selectedType == null) {
+    _showMsg("Select type");
+    return;
+  }
 
-    setState(() => _isSaving = true);
+  setState(() => _isSaving = true);
 
-    try {
+  try {
+    if (widget.isEdit) {
+      // 🔥 UPDATE EXISTING DOCUMENT
+      await FirebaseFirestore.instance
+          .collection('fdb_datum')
+          .doc(widget.docId)
+          .update({
+        'title': _titleController.text.trim(),
+        'organization': _organizationController.text.trim(),
+        'duration': _durationController.text.trim(),
+        'startDate': _startDate,
+        'endDate': _endDate,
+        'type': _selectedType,
+        'photoUrl': _certificateUrl,
+        'status': 'pending', // 🔥 RESET TO PENDING AFTER EDIT
+      });
+    } else {
+      // 🔥 ADD NEW DOCUMENT
       await _fdbService.addFdb(
         title: _titleController.text.trim(),
         organization: _organizationController.text.trim(),
@@ -165,16 +207,17 @@ class _FdbAddPageState extends State<FdbAddPage> {
         name: _facultyName,
         photoUrl: _certificateUrl,
       );
-
-      if (!mounted) return;
-      Navigator.pop(context);
-    } catch (e) {
-      _showMsg("Error: $e");
-    } finally {
-      if (mounted) setState(() => _isSaving = false);
     }
-  }
 
+    if (!mounted) return;
+    Navigator.pop(context);
+
+  } catch (e) {
+    _showMsg("Error: $e");
+  } finally {
+    if (mounted) setState(() => _isSaving = false);
+  }
+}
   void _showMsg(String msg) {
     ScaffoldMessenger.of(context)
         .showSnackBar(SnackBar(content: Text(msg)));
@@ -185,8 +228,10 @@ class _FdbAddPageState extends State<FdbAddPage> {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FA),
       appBar: AppBar(
-        title: const Text("Add Certificate",
-            style: TextStyle(fontWeight: FontWeight.bold)),
+        title: Text(
+          widget.isEdit ? "Edit Certificate" : "Add Certificate",
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
         centerTitle: true,
         backgroundColor: Colors.indigo,
         foregroundColor: Colors.white,
@@ -287,7 +332,11 @@ class _FdbAddPageState extends State<FdbAddPage> {
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.indigo,
                             ),
-                            child: const Text("SAVE RECORD"),
+                            child: Text(
+                              widget.isEdit
+                                  ? "UPDATE RECORD"
+                                  : "SAVE RECORD",
+                            ),
                           ),
                         ),
                 ],
@@ -359,7 +408,7 @@ class _FdbAddPageState extends State<FdbAddPage> {
       onTap: () async {
         final picked = await showDatePicker(
           context: context,
-          initialDate: DateTime.now(),
+          initialDate: date ?? DateTime.now(),
           firstDate: DateTime(2000),
           lastDate: DateTime(2100),
         );
