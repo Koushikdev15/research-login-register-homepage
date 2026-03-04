@@ -2,16 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/admin_provider.dart';
 import '../../models/faculty_profile.dart';
-import '../../utils/constants.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_text_styles.dart';
 import 'admin_general_info_screen.dart';
 import 'admin_research_screen.dart';
 import '../../services/pdf_service.dart';
 import '../faculty/fdb_view_page.dart';
-
-
-
 
 class FacultyDetailsScreen extends StatefulWidget {
   const FacultyDetailsScreen({super.key});
@@ -350,28 +346,6 @@ class _FacultyCard extends StatelessWidget {
           ),
         ),
       ],
-    );
-  }
-}
-
-
-class _ActionButton extends StatelessWidget {
-  final String label;
-  final VoidCallback onPressed;
-
-  const _ActionButton({required this.label, required this.onPressed});
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onPressed,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 6),
-        child: Text(
-          label,
-          style: AppTextStyles.label.copyWith(color: AppColors.academicBlue),
-        ),
-      ),
     );
   }
 }

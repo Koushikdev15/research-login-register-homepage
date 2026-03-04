@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../../services/faculty_service.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/faculty_provider.dart';
 import '../../services/orcid_service.dart';

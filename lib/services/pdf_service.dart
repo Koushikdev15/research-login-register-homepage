@@ -1,4 +1,3 @@
-import 'dart:typed_data';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
@@ -79,6 +78,8 @@ static Future<void> generateFacultyPDF(
 
           _buildSectionHeader('Work Experience'),
           _buildWorkExperienceList(faculty),
+          _buildCITExperience(faculty),
+         
 
           pw.SizedBox(height: 20),
 
@@ -352,24 +353,29 @@ static Future<void> generateFacultyPDF(
     );
   }
 
-  static pw.Widget _buildCITExperience(FacultyProfile faculty) {
-    if (faculty.calculatedCITYears <= 0) return pw.SizedBox();
-    
-    return pw.Container(
-      padding: const pw.EdgeInsets.all(10),
-      decoration: pw.BoxDecoration(
-        border: pw.Border.all(color: PdfColors.orange),
-        borderRadius: pw.BorderRadius.circular(5),
-        color: PdfColors.orange50,
-      ),
-      child: pw.Row(
-        children: [
-           pw.Text('Experience in CIT: ', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
-           pw.Text('${faculty.calculatedCITYears} years'),
-        ]
-      )
-    );
-  }
+ static pw.Widget _buildCITExperience(FacultyProfile faculty) {
+  final double citYears = faculty.calculatedCITYears;
+
+  if (citYears <= 0) return pw.SizedBox();
+
+  return pw.Container(
+    padding: pw.EdgeInsets.all(10),
+    decoration: pw.BoxDecoration(
+      border: pw.Border.all(color: PdfColors.orange),
+      borderRadius: pw.BorderRadius.circular(5),
+      color: PdfColors.orange50,
+    ),
+    child: pw.Row(
+      children: [
+        pw.Text(
+          'Experience in CIT: ',
+          style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+        ),
+        pw.Text('${citYears.toStringAsFixed(1)} years'),
+      ],
+    ),
+  );
+}
 
   static pw.Widget _buildEducationTable(FacultyProfile faculty) {
     if (faculty.educationQualifications.isEmpty) return pw.Text('No education details available.');

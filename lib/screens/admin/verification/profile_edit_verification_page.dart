@@ -46,7 +46,7 @@ stream: FirebaseFirestore.instance
 
             final facultyName =
                 data['facultyName'] ?? 'Unknown';
-            final facultyId =
+            final String facultyId =
                 data['facultyId'] ?? '';
 
             final Timestamp? requestedAtTimestamp =

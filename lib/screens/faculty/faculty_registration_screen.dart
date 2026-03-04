@@ -1,22 +1,18 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
-import 'package:flutter_spinkit/flutter_spinkit.dart';
+import '../../models/faculty_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/faculty_provider.dart';
-import '../../models/faculty_model.dart';
+import '../../services/drive_service.dart';
+import '../../theme/app_colors.dart';
 import '../../utils/constants.dart';
 import '../../utils/validators.dart';
-import '../../theme/app_colors.dart';
-import '../../theme/app_text_styles.dart';
 import '../../widgets/personal_info_form.dart';
 import '../../widgets/research_ids_form.dart';
-import '../../widgets/work_experience_card.dart';
-import '../../widgets/education_card.dart';
 import 'faculty_dashboard.dart';
-import 'package:image_picker/image_picker.dart';
-import '../../services/drive_service.dart';
-import 'dart:io';
 
 class FacultyRegistrationScreen extends StatefulWidget {
   const FacultyRegistrationScreen({super.key});

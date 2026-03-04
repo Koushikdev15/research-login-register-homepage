@@ -1,13 +1,10 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../utils/constants.dart';
+import '../../providers/admin_provider.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_text_styles.dart';
-import 'faculty_details_screen.dart';
-import '../../providers/admin_provider.dart';
 import 'admin_home_screen.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 
 
 class AdminLoginScreen extends StatefulWidget {

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/user_model.dart';
-import '../models/faculty_model.dart';
 import '../models/faculty_profile.dart'; // Make sure this file exists
 import '../services/faculty_service.dart';
 

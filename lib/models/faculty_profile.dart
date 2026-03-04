@@ -1,6 +1,5 @@
 import 'user_model.dart';
 import 'faculty_model.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 
 class FacultyProfile {
   final UserModel userModel;
@@ -19,70 +18,51 @@ class FacultyProfile {
     this.educationQualifications = const [],
   });
 
-  // Calculate total experience
-  // Calculate total experience
-  int get totalExperience {
-    int total = 0;
-    
-    // Add external work experience
+  // ===============================
+  // Calculate CIT Experience
+  // ===============================
+
+  double get calculatedCITYears {
+    if (personalInfo.dateOfJoining.isNotEmpty) {
+      try {
+        final parts = personalInfo.dateOfJoining.split('-');
+
+        if (parts.length == 3) {
+          final day = int.parse(parts[0]);
+          final month = int.parse(parts[1]);
+          final year = int.parse(parts[2]);
+
+          final joiningDate = DateTime(year, month, day);
+          final now = DateTime.now();
+
+          final differenceDays = now.difference(joiningDate).inDays;
+
+          // Use 365.25 for leap year accuracy
+          return differenceDays / 365.25;
+        }
+      } catch (e) {
+        return citExperience?.years.toDouble() ?? 0.0;
+      }
+    }
+
+    return citExperience?.years.toDouble() ?? 0.0;
+  }
+
+  // ===============================
+  // Calculate Total Experience
+  // ===============================
+
+  double get totalExperience {
+    double total = 0;
+
+    // External Work Experience
     for (var exp in workExperiences) {
       total += exp.yearsOfExperience;
     }
-    
-    // Calculate CIT experience dynamically from Date of Joining
-    if (personalInfo.dateOfJoining.isNotEmpty) {
-      try {
-        // Expected format: DD-MM-YYYY or similar. 
-        // Trying to parse standard formats.
-        // Assuming format is 'dd-MM-yyyy' based on typical input
-        final parts = personalInfo.dateOfJoining.split('-');
-        if (parts.length == 3) {
-          final day = int.parse(parts[0]);
-          final month = int.parse(parts[1]);
-          final year = int.parse(parts[2]);
-          final joiningDate = DateTime(year, month, day);
-          final now = DateTime.now();
-          
-          final difference = now.difference(joiningDate).inDays;
-          final yearsInCIT = (difference / 365).floor();
-          
-          if (yearsInCIT > 0) {
-            total += yearsInCIT;
-          }
-        }
-      } catch (e) {
-        // Fallback to manually entered CIT Experience if date parsing fails
-        if (citExperience != null) {
-          total += citExperience!.years;
-        }
-      }
-    } else if (citExperience != null) {
-      // Fallback if no date is present
-      total += citExperience!.years;
-    }
-    
+
+    // CIT Experience
+    total += calculatedCITYears;
+
     return total;
-  }
-  
-  // Helper to get just CIT years
-  int get calculatedCITYears {
-    if (personalInfo.dateOfJoining.isNotEmpty) {
-      try {
-        final parts = personalInfo.dateOfJoining.split('-');
-        if (parts.length == 3) {
-          final day = int.parse(parts[0]);
-          final month = int.parse(parts[1]);
-          final year = int.parse(parts[2]);
-          final joiningDate = DateTime(year, month, day);
-          final now = DateTime.now();
-          
-          final difference = now.difference(joiningDate).inDays;
-          return (difference / 365).floor();
-        }
-      } catch (e) {
-        return citExperience?.years ?? 0;
-      }
-    }
-    return citExperience?.years ?? 0;
   }
 }

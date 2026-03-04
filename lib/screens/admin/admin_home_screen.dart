@@ -36,7 +36,6 @@ Widget build(BuildContext context) {
       final isMobile = constraints.maxWidth < 600;
       final isTablet =
           constraints.maxWidth >= 600 && constraints.maxWidth < 1100;
-      final isDesktop = constraints.maxWidth >= 1100;
 
       if (isMobile) {
         // 📱 Mobile Layout (Bottom Navigation)
