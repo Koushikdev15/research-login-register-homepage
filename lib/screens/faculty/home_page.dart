@@ -14,6 +14,7 @@ import '../../widgets/education_card.dart';
 import '../../widgets/profile_picture_widget.dart';
 import '../../widgets/work_experience_card.dart';
 import '../../widgets/scopus_home_summary.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 
 class HomePage extends StatefulWidget {
@@ -398,14 +399,42 @@ await _calculateResearchSummary(
                     children: [
 
                       /// PROFILE PHOTO
-                      ProfilePictureWidget(
-                         imageUrl: personalInfo.photoUrl != null
-                            ? "https://drive.google.com/uc?export=view&id=${personalInfo.photoUrl}"
-                            : null,
-                        size: 110,
-                        showEditIcon: true,
-                        onTap: _showAvatarOptions,
-                      ),
+                      FutureBuilder<DocumentSnapshot>(
+  future: FirebaseFirestore.instance
+      .collection('users')
+      .doc(
+        widget.facultyId ??
+            authProvider.currentUserId,
+      )
+      .get(),
+
+  builder: (context, snapshot) {
+
+    String? profileUrl;
+
+    if (snapshot.hasData && snapshot.data!.exists) {
+
+      final data =
+          snapshot.data!.data()
+              as Map<String, dynamic>;
+
+      profileUrl =
+          data['profilePictureURL'];
+    }
+
+    return ProfilePictureWidget(
+      imageUrl:
+          profileUrl != null &&
+                  profileUrl.isNotEmpty
+              ? "https://drive.google.com/uc?export=view&id=$profileUrl"
+              : null,
+
+      size: 110,
+      showEditIcon: true,
+      onTap: _showAvatarOptions,
+    );
+  },
+),
 
                       const SizedBox(height: 16),
 
@@ -924,7 +953,7 @@ StreamBuilder<DocumentSnapshot>(
               /// Update Firestore
               await FirebaseFirestore.instance
                   .collection('users')
-                  .doc(authProvider.currentUserId)
+                  .doc(widget.facultyId ??authProvider.currentUserId,)
                   .collection('workExperience')
                   .doc(exp.id)
                   .update(updatedExperience.toMap());
@@ -985,8 +1014,9 @@ void _deleteWorkExperience(String id) {
                   Provider.of<FacultyProvider>(context, listen: false);
 
               await facultyProvider.deleteWorkExperience(
-                authProvider.currentUserId!,
-                id,
+                 widget.facultyId ??
+                 authProvider.currentUserId!,
+                 id,
               );
 
               Navigator.pop(context);
