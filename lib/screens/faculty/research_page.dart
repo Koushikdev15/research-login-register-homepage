@@ -67,7 +67,7 @@ class _ResearchPageState extends State<ResearchPage> {
     }
 
     return Scaffold(
-      backgroundColor: const Color(0xFF0E1117),
+      backgroundColor: const Color(0xFFF5F7FB),
       body: CustomScrollView(
         slivers: [
           const SliverToBoxAdapter(child: _ResearchHeader()),
@@ -92,7 +92,7 @@ class _ResearchPageState extends State<ResearchPage> {
 }
 
 /* =======================================================
-   🔹 HEADER
+   HEADER
    ======================================================= */
 
 class _ResearchHeader extends StatelessWidget {
@@ -101,11 +101,16 @@ class _ResearchHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(28, 64, 28, 42),
+      padding: const EdgeInsets.fromLTRB(20, 24, 20, 20),
       decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          colors: [Color(0xFF111827), Color(0xFF1F2937)],
+        color: Colors.white,
+        borderRadius: BorderRadius.only(
+          bottomLeft: Radius.circular(18),
+          bottomRight: Radius.circular(18),
         ),
+        boxShadow: [
+          BoxShadow(color: Colors.black12, blurRadius: 6),
+        ],
       ),
       child: const Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -113,15 +118,14 @@ class _ResearchHeader extends StatelessWidget {
           Text(
             'Research Portfolio',
             style: TextStyle(
-              color: Colors.white,
-              fontSize: 28,
+              fontSize: 22,
               fontWeight: FontWeight.bold,
             ),
           ),
-          SizedBox(height: 8),
+          SizedBox(height: 6),
           Text(
             'Verification status shown for current year works',
-            style: TextStyle(color: Colors.white70),
+            style: TextStyle(color: Colors.grey),
           ),
         ],
       ),
@@ -130,7 +134,7 @@ class _ResearchHeader extends StatelessWidget {
 }
 
 /* =======================================================
-   🔹 FILTER BAR
+   FILTER BAR
    ======================================================= */
 
 class _FilterBar extends StatelessWidget {
@@ -152,14 +156,26 @@ class _FilterBar extends StatelessWidget {
     };
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Wrap(
-        spacing: 10,
+        spacing: 8,
+        runSpacing: 8,
         children: filters.entries.map((e) {
           final active = selected == e.key;
+
           return ChoiceChip(
-            label: Text(e.value),
+            label: Text(
+              e.value,
+              style: TextStyle(
+                color: active ? Colors.white : Colors.black87,
+              ),
+            ),
             selected: active,
+            selectedColor: Colors.blue,
+            backgroundColor: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
             onSelected: (_) => onChanged(e.key),
           );
         }).toList(),
@@ -169,7 +185,7 @@ class _FilterBar extends StatelessWidget {
 }
 
 /* =======================================================
-   🔹 WORKS SLIVER
+   WORK LIST
    ======================================================= */
 
 class _WorksSliver extends StatelessWidget {
@@ -215,7 +231,7 @@ class _WorksSliver extends StatelessWidget {
           final expanded = expandedYears[year] ?? true;
 
           return Padding(
-            padding: const EdgeInsets.fromLTRB(24, 32, 24, 0),
+            padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
             child: Column(
               children: [
                 GestureDetector(
@@ -225,23 +241,21 @@ class _WorksSliver extends StatelessWidget {
                       Text(
                         year,
                         style: const TextStyle(
-                          fontSize: 22,
+                          fontSize: 20,
                           fontWeight: FontWeight.bold,
-                          color: Colors.white,
+                          color: Colors.black87,
                         ),
                       ),
                       const Spacer(),
                       Icon(
                         expanded ? Icons.expand_less : Icons.expand_more,
-                        color: Colors.white70,
+                        color: Colors.grey,
                       ),
                     ],
                   ),
                 ),
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 8),
-                  child: Divider(color: Colors.white24),
-                ),
+                Divider(color: Colors.grey.shade300),
+
                 if (expanded)
                   ...works.map((w) => _WorkCardWithBadges(work: w)),
               ],
@@ -255,7 +269,7 @@ class _WorksSliver extends StatelessWidget {
 }
 
 /* =======================================================
-   🔹 WORK CARD WITH BADGES (TREE MODEL)
+   WORK CARD
    ======================================================= */
 
 class _WorkCardWithBadges extends StatelessWidget {
@@ -271,14 +285,18 @@ class _WorkCardWithBadges extends StatelessWidget {
     final String? uid = authProvider.currentUserId;
 
     return Container(
-      margin: const EdgeInsets.symmetric(vertical: 16),
-      padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 22),
+      margin: const EdgeInsets.symmetric(vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF0F172A), Color(0xFF020617)],
-        ),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white12),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: const [
+          BoxShadow(
+            color: Colors.black12,
+            blurRadius: 6,
+            offset: Offset(0, 2),
+          )
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -286,72 +304,72 @@ class _WorkCardWithBadges extends StatelessWidget {
           Text(
             work.title,
             style: const TextStyle(
-              color: Colors.white,
+              color: Colors.black87,
               fontWeight: FontWeight.w700,
-              fontSize: 16,
+              fontSize: 15,
             ),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 6),
+
           Row(
             children: [
               Expanded(
                 child: Text(
                   work.source ?? '',
-                  style: const TextStyle(color: Colors.white70),
+                  style: const TextStyle(color: Colors.grey),
                 ),
               ),
               if (work.year != null)
                 Text(
                   work.year!,
-                  style: const TextStyle(color: Colors.white54),
+                  style: const TextStyle(color: Colors.grey),
                 ),
             ],
           ),
-          const SizedBox(height: 18),
+
+          const SizedBox(height: 10),
 
           if (_isCurrentYear && uid != null)
             StreamBuilder<DocumentSnapshot>(
-  stream: FirebaseFirestore.instance
-      .collection('research_verifications_tree')
-      .doc(uid)
-      .collection('years')
-      .doc(work.year ?? '')
-      .collection('workTypes')
-      .doc(work.type)
-      .collection('works')
-      .doc(work.putCode)
-      .snapshots(),
-  builder: (context, snapshot) {
-    if (!snapshot.hasData || !snapshot.data!.exists) {
-      return const _Badge(text: 'PENDING');
-    }
+              stream: FirebaseFirestore.instance
+                  .collection('research_verifications_tree')
+                  .doc(uid)
+                  .collection('years')
+                  .doc(work.year ?? '')
+                  .collection('workTypes')
+                  .doc(work.type)
+                  .collection('works')
+                  .doc(work.putCode)
+                  .snapshots(),
+              builder: (context, snapshot) {
+                if (!snapshot.hasData || !snapshot.data!.exists) {
+                  return const _Badge(text: 'PENDING');
+                }
 
-    final data =
-        snapshot.data!.data() as Map<String, dynamic>;
+                final data =
+                    snapshot.data!.data() as Map<String, dynamic>;
 
-    final String status =
-        data['verificationStatus'] ?? 'PENDING';
-    final String? type =
-        data['verificationType'];
+                final String status =
+                    data['verificationStatus'] ?? 'PENDING';
+                final String? type =
+                    data['verificationType'];
 
-    return Wrap(
-      spacing: 10,
-      runSpacing: 10,
-      children: [
-        if (type != null)
-          _Badge(
-            text: type,
-            highlight: true,
-          ),
-        _Badge(
-          text: status,
-          highlight: status == 'VERIFIED',
-        ),
-      ],
-    );
-  },
-),
-
+                return Wrap(
+                  spacing: 8,
+                  children: [
+                    if (type != null)
+                      _Badge(
+                        text: type,
+                        highlight: true,
+                      ),
+                    _Badge(
+                      text: status,
+                      highlight: status == 'VERIFIED',
+                    ),
+                  ],
+                );
+              },
+            ),
         ],
       ),
     );
@@ -359,7 +377,7 @@ class _WorkCardWithBadges extends StatelessWidget {
 }
 
 /* =======================================================
-   🔹 BADGE
+   BADGE
    ======================================================= */
 
 class _Badge extends StatelessWidget {
@@ -373,7 +391,8 @@ class _Badge extends StatelessWidget {
     return Chip(
       label: Text(text),
       backgroundColor:
-          highlight ? Colors.green.shade800 : Colors.grey.shade800,
+          highlight ? Colors.green.shade600 : Colors.orange.shade400,
+      labelStyle: const TextStyle(color: Colors.white),
     );
   }
 }

@@ -228,24 +228,28 @@ Widget build(BuildContext context) {
       child: researchIDs == null
           ? _buildEmptyState('No research IDs available')
           : Column(
-              children: [
-                if (researchIDs.vidwanId != null && researchIDs.vidwanId!.isNotEmpty)
-                  _buildInfoRow('Vidwan ID', researchIDs.vidwanId!, Icons.account_circle),
-                if (researchIDs.scopusId != null && researchIDs.scopusId!.isNotEmpty)
-                  _buildInfoRow('Scopus ID', researchIDs.scopusId!, Icons.science),
-                if (researchIDs.orcidId != null && researchIDs.orcidId!.isNotEmpty)
-                  _buildInfoRow('ORCID', researchIDs.orcidId!, Icons.fingerprint),
-                if (researchIDs.googleScholarId != null && researchIDs.googleScholarId!.isNotEmpty)
-                  _buildInfoRow('Google Scholar ID', researchIDs.googleScholarId!, Icons.school),
-                
-                // If all are empty
-                if ((researchIDs.vidwanId == null || researchIDs.vidwanId!.isEmpty) &&
-                    (researchIDs.scopusId == null || researchIDs.scopusId!.isEmpty) &&
-                    (researchIDs.orcidId == null || researchIDs.orcidId!.isEmpty) &&
-                    (researchIDs.googleScholarId == null || researchIDs.googleScholarId!.isEmpty))
-                  _buildEmptyState('No research IDs registered'),
-              ],
-            ),
+  children: [
+
+    if (researchIDs.vidwanId.isNotEmpty)
+      _buildInfoRow('Vidwan ID', researchIDs.vidwanId, Icons.account_circle),
+
+    if (researchIDs.scopusId.isNotEmpty)
+      _buildInfoRow('Scopus ID', researchIDs.scopusId, Icons.science),
+
+    if (researchIDs.orcidId.isNotEmpty)
+      _buildInfoRow('ORCID', researchIDs.orcidId, Icons.fingerprint),
+
+    if (researchIDs.googleScholarId.isNotEmpty)
+      _buildInfoRow('Google Scholar ID', researchIDs.googleScholarId, Icons.school),
+
+    // If all empty
+    if (researchIDs.vidwanId.isEmpty &&
+        researchIDs.scopusId.isEmpty &&
+        researchIDs.orcidId.isEmpty &&
+        researchIDs.googleScholarId.isEmpty)
+      _buildEmptyState('No research IDs registered'),
+  ],
+)
     );
   }
 

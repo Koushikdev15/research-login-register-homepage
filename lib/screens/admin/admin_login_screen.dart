@@ -4,7 +4,7 @@ import 'package:provider/provider.dart';
 import '../../providers/admin_provider.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_text_styles.dart';
-import 'admin_home_screen.dart';
+import 'admin_dashboard_screen.dart';
 
 
 class AdminLoginScreen extends StatefulWidget {

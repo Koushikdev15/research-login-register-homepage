@@ -6,11 +6,15 @@ import '../utils/validators.dart';
 class PersonalInfoForm extends StatefulWidget {
   final Function(Map<String, String>) onSaved;
   final GlobalKey<FormState> formKey;
+  final TextEditingController emailController;
+  final Map<String, String>? initialData;
 
   const PersonalInfoForm({
     super.key,
     required this.onSaved,
     required this.formKey,
+    required this.emailController,
+    this.initialData,
   });
 
   @override
@@ -26,12 +30,34 @@ class _PersonalInfoFormState extends State<PersonalInfoForm> {
   final TextEditingController _aadharController = TextEditingController();
   final TextEditingController _contactController = TextEditingController();
   final TextEditingController _whatsappController = TextEditingController();
-  final TextEditingController _mailController = TextEditingController();
 
   String? _selectedDesignation;
   String? _selectedDepartment;
 
   Map<String, String> _formData = {};
+
+  @override
+  void initState() {
+    super.initState();
+
+    if (widget.initialData != null) {
+      _nameController.text = widget.initialData!['name'] ?? '';
+      _ageController.text = widget.initialData!['age'] ?? '';
+      _dobController.text = widget.initialData!['dateOfBirth'] ?? '';
+      _dojController.text = widget.initialData!['dateOfJoining'] ?? '';
+      _panController.text = widget.initialData!['panNumber'] ?? '';
+      _aadharController.text = widget.initialData!['aadharNumber'] ?? '';
+      _contactController.text = widget.initialData!['contactNo'] ?? '';
+      _whatsappController.text = widget.initialData!['whatsappNo'] ?? '';
+
+      _selectedDesignation = widget.initialData!['designation'];
+      _selectedDepartment = widget.initialData!['department'];
+    }
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _updateFormData();
+    });
+  }
 
   @override
   void dispose() {
@@ -43,10 +69,10 @@ class _PersonalInfoFormState extends State<PersonalInfoForm> {
     _aadharController.dispose();
     _contactController.dispose();
     _whatsappController.dispose();
-    _mailController.dispose();
     super.dispose();
   }
 
+  /// DATE PICKER
   Future<void> _selectDate(
       BuildContext context, TextEditingController controller) async {
     final DateTime? picked = await showDatePicker(
@@ -64,6 +90,7 @@ class _PersonalInfoFormState extends State<PersonalInfoForm> {
     }
   }
 
+  /// UPDATE DATA
   void _updateFormData() {
     _formData = {
       'name': _nameController.text.trim(),
@@ -76,10 +103,21 @@ class _PersonalInfoFormState extends State<PersonalInfoForm> {
       'aadharNumber': _aadharController.text.trim(),
       'contactNo': _contactController.text.trim(),
       'whatsappNo': _whatsappController.text.trim(),
-      'mailId': _mailController.text.trim(),
+      'mailId': widget.emailController.text.trim(),
     };
 
     widget.onSaved(_formData);
+  }
+
+  InputDecoration _inputDecoration(String label) {
+    return InputDecoration(
+      labelText: label,
+      contentPadding:
+          const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+      ),
+    );
   }
 
   @override
@@ -94,26 +132,22 @@ class _PersonalInfoFormState extends State<PersonalInfoForm> {
             'Personal Information',
             style: AppConstants.subheadingStyle,
           ),
+
           const SizedBox(height: AppConstants.paddingMedium),
 
+          /// NAME
           TextFormField(
             controller: _nameController,
-            decoration: const InputDecoration(labelText: 'Full Name'),
+            decoration: _inputDecoration('Full Name'),
             validator: Validators.validateName,
           ),
+
           const SizedBox(height: AppConstants.paddingMedium),
 
-          LayoutBuilder(
-  builder: (context, constraints) {
-    if (constraints.maxWidth < 600) {
-      // Mobile → Stack vertically
-      return Column(
-        children: [
+          /// DESIGNATION
           DropdownButtonFormField<String>(
             value: _selectedDesignation,
-            decoration: const InputDecoration(
-              labelText: 'Designation',
-            ),
+            decoration: _inputDecoration('Designation'),
             isExpanded: true,
             items: AppConstants.designations.map((value) {
               return DropdownMenuItem(
@@ -132,12 +166,13 @@ class _PersonalInfoFormState extends State<PersonalInfoForm> {
             },
             validator: Validators.validateDesignation,
           ),
+
           const SizedBox(height: AppConstants.paddingMedium),
+
+          /// DEPARTMENT
           DropdownButtonFormField<String>(
             value: _selectedDepartment,
-            decoration: const InputDecoration(
-              labelText: 'Department',
-            ),
+            decoration: _inputDecoration('Department'),
             isExpanded: true,
             items: AppConstants.departments.map((value) {
               return DropdownMenuItem(
@@ -156,133 +191,37 @@ class _PersonalInfoFormState extends State<PersonalInfoForm> {
             },
             validator: Validators.validateDepartment,
           ),
-        ],
-      );
-    } else {
-      // Tablet/Desktop → Side by side
-      return Row(
-        children: [
-          Expanded(
-            child: DropdownButtonFormField<String>(
-              value: _selectedDesignation,
-              decoration:
-                  const InputDecoration(labelText: 'Designation'),
-              isExpanded: true,
-              items: AppConstants.designations.map((value) {
-                return DropdownMenuItem(
-                  value: value,
-                  child: Text(
-                    value,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                );
-              }).toList(),
-              onChanged: (val) {
-                setState(() {
-                  _selectedDesignation = val;
-                  _updateFormData();
-                });
-              },
-              validator: Validators.validateDesignation,
-            ),
-          ),
-          const SizedBox(width: AppConstants.paddingMedium),
-          Expanded(
-            child: DropdownButtonFormField<String>(
-              value: _selectedDepartment,
-              decoration:
-                  const InputDecoration(labelText: 'Department'),
-              isExpanded: true,
-              items: AppConstants.departments.map((value) {
-                return DropdownMenuItem(
-                  value: value,
-                  child: Text(
-                    value,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                );
-              }).toList(),
-              onChanged: (val) {
-                setState(() {
-                  _selectedDepartment = val;
-                  _updateFormData();
-                });
-              },
-              validator: Validators.validateDepartment,
-            ),
-          ),
-        ],
-      );
-    }
-  },
-),
+
           const SizedBox(height: AppConstants.paddingMedium),
 
-          LayoutBuilder(
-  builder: (context, constraints) {
-    if (constraints.maxWidth < 600) {
-      return Column(
-        children: [
+          /// AGE
           TextFormField(
             controller: _ageController,
-            decoration:
-                const InputDecoration(labelText: 'Age'),
+            decoration: _inputDecoration('Age'),
             keyboardType: TextInputType.number,
             validator: Validators.validateAge,
           ),
+
           const SizedBox(height: AppConstants.paddingMedium),
+
+          /// DOB
           TextFormField(
             controller: _dobController,
-            decoration: const InputDecoration(
-              labelText: 'Date of Birth (DD/MM/YYYY)',
-              suffixIcon: Icon(Icons.calendar_today),
-            ),
             readOnly: true,
+            decoration: _inputDecoration('Date of Birth (DD/MM/YYYY)')
+                .copyWith(suffixIcon: const Icon(Icons.calendar_today)),
             onTap: () => _selectDate(context, _dobController),
             validator: Validators.validateDate,
           ),
-        ],
-      );
-    } else {
-      return Row(
-        children: [
-          Expanded(
-            child: TextFormField(
-              controller: _ageController,
-              decoration:
-                  const InputDecoration(labelText: 'Age'),
-              keyboardType: TextInputType.number,
-              validator: Validators.validateAge,
-            ),
-          ),
-          const SizedBox(width: AppConstants.paddingMedium),
-          Expanded(
-            child: TextFormField(
-              controller: _dobController,
-              decoration: const InputDecoration(
-                labelText: 'Date of Birth (DD/MM/YYYY)',
-                suffixIcon: Icon(Icons.calendar_today),
-              ),
-              readOnly: true,
-              onTap: () => _selectDate(context, _dobController),
-              validator: Validators.validateDate,
-            ),
-          ),
-        ],
-      );
-    }
-  },
-),
 
           const SizedBox(height: AppConstants.paddingMedium),
 
+          /// DOJ
           TextFormField(
             controller: _dojController,
-            decoration: const InputDecoration(
-              labelText: 'Date of Joining (DD/MM/YYYY)',
-              suffixIcon: Icon(Icons.calendar_today),
-            ),
             readOnly: true,
+            decoration: _inputDecoration('Date of Joining (DD/MM/YYYY)')
+                .copyWith(suffixIcon: const Icon(Icons.calendar_today)),
             onTap: () => _selectDate(context, _dojController),
             validator: (val) =>
                 Validators.validateJoiningDate(val, _dobController.text),
@@ -290,51 +229,51 @@ class _PersonalInfoFormState extends State<PersonalInfoForm> {
 
           const SizedBox(height: AppConstants.paddingMedium),
 
+          /// PAN
           TextFormField(
             controller: _panController,
-            decoration:
-                const InputDecoration(labelText: 'PAN Number'),
+            decoration: _inputDecoration('PAN Number'),
             validator: Validators.validatePAN,
           ),
 
           const SizedBox(height: AppConstants.paddingMedium),
 
+          /// AADHAR
           TextFormField(
             controller: _aadharController,
-            decoration:
-                const InputDecoration(labelText: 'Aadhar Number'),
+            decoration: _inputDecoration('Aadhar Number'),
             keyboardType: TextInputType.number,
             validator: Validators.validateAadhar,
           ),
 
           const SizedBox(height: AppConstants.paddingMedium),
 
+          /// CONTACT
           TextFormField(
             controller: _contactController,
-            decoration:
-                const InputDecoration(labelText: 'Contact Number'),
+            decoration: _inputDecoration('Contact Number'),
             keyboardType: TextInputType.phone,
             validator: Validators.validatePhoneNumber,
           ),
 
           const SizedBox(height: AppConstants.paddingMedium),
 
+          /// WHATSAPP
           TextFormField(
             controller: _whatsappController,
-            decoration:
-                const InputDecoration(labelText: 'WhatsApp Number'),
+            decoration: _inputDecoration('WhatsApp Number'),
             keyboardType: TextInputType.phone,
             validator: Validators.validatePhoneNumber,
           ),
 
           const SizedBox(height: AppConstants.paddingMedium),
 
+          /// EMAIL
           TextFormField(
-            controller: _mailController,
-            decoration:
-                const InputDecoration(labelText: 'Email ID'),
-            keyboardType: TextInputType.emailAddress,
-            validator: Validators.validateEmail,
+            controller: widget.emailController,
+            readOnly: true,
+            decoration: _inputDecoration('Email ID')
+                .copyWith(prefixIcon: const Icon(Icons.email)),
           ),
         ],
       ),

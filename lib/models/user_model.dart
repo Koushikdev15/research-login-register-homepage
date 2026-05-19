@@ -33,7 +33,7 @@ class UserModel {
         : null,
 
     // 🔥 FIXED LINE
-    profilePictureURL: data['photoUrl'],
+   profilePictureURL: data['profilePictureURL'],
   );
 }
 

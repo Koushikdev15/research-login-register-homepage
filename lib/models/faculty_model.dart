@@ -12,8 +12,6 @@ class PersonalInfo {
   final String contactNo;
   final String whatsappNo;
   final String mailId;
-
-  // ✅ NEW FIELD
   final String? photoUrl;
 
   PersonalInfo({
@@ -28,11 +26,11 @@ class PersonalInfo {
     required this.contactNo,
     required this.whatsappNo,
     required this.mailId,
-    this.photoUrl, // ✅ Added
+    this.photoUrl,
   });
 
   factory PersonalInfo.fromFirestore(DocumentSnapshot doc) {
-    Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+    final data = doc.data() as Map<String, dynamic>? ?? {};
 
     return PersonalInfo(
       name: data['name'] ?? '',
@@ -46,7 +44,7 @@ class PersonalInfo {
       contactNo: data['contactNo'] ?? '',
       whatsappNo: data['whatsappNo'] ?? '',
       mailId: data['mailId'] ?? '',
-      photoUrl: data['photoUrl'], // ✅ Added
+      photoUrl: data['photoUrl'],
     );
   }
 
@@ -63,7 +61,7 @@ class PersonalInfo {
       'contactNo': contactNo,
       'whatsappNo': whatsappNo,
       'mailId': mailId,
-      'photoUrl': photoUrl, // ✅ Added
+      'photoUrl': photoUrl,
     };
   }
 
@@ -81,7 +79,7 @@ class PersonalInfo {
     String? contactNo,
     String? whatsappNo,
     String? mailId,
-    String? photoUrl, // ✅ Added
+    String? photoUrl,
   }) {
     return PersonalInfo(
       name: name ?? this.name,
@@ -95,56 +93,69 @@ class PersonalInfo {
       contactNo: contactNo ?? this.contactNo,
       whatsappNo: whatsappNo ?? this.whatsappNo,
       mailId: mailId ?? this.mailId,
-      photoUrl: photoUrl ?? this.photoUrl, // ✅ Added
+      photoUrl: photoUrl ?? this.photoUrl,
     );
   }
 }
 
 class ResearchIDs {
-  final String? vidwanId;
-  final String? scopusId;
-  final String? orcidId;
-  final String? googleScholarId;
+  final String googleScholarId;
+  final String orcidId;
+  final String scopusId;
+  final String vidwanId;
+  final String researcherId;
+  final String wosId;
 
   ResearchIDs({
-    this.vidwanId,
-    this.scopusId,
-    this.orcidId,
-    this.googleScholarId,
+    required this.googleScholarId,
+    required this.orcidId,
+    required this.scopusId,
+    required this.vidwanId,
+    required this.researcherId,
+    required this.wosId,
   });
 
   factory ResearchIDs.fromFirestore(DocumentSnapshot doc) {
-    Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+    final data = doc.data() as Map<String, dynamic>? ?? {};
+
     return ResearchIDs(
-      vidwanId: data['vidwanId'],
-      scopusId: data['scopusId'],
-      orcidId: data['orcidId'],
-      googleScholarId: data['googleScholarId'],
+      googleScholarId: data['googleScholarId'] ?? '',
+      orcidId: data['orcidId'] ?? '',
+      scopusId: data['scopusId'] ?? '',
+      vidwanId: data['vidwanId'] ?? '',
+      researcherId: data['researcherId'] ?? '',
+      wosId: data['wosId'] ?? '',
     );
   }
 
   Map<String, dynamic> toMap() {
     return {
-      'vidwanId': vidwanId,
-      'scopusId': scopusId,
-      'orcidId': orcidId,
       'googleScholarId': googleScholarId,
+      'orcidId': orcidId,
+      'scopusId': scopusId,
+      'vidwanId': vidwanId,
+      'researcherId': researcherId,
+      'wosId': wosId,
     };
   }
 
   ResearchIDs copy() => copyWith();
 
   ResearchIDs copyWith({
-    String? vidwanId,
-    String? scopusId,
-    String? orcidId,
     String? googleScholarId,
+    String? orcidId,
+    String? scopusId,
+    String? vidwanId,
+    String? researcherId,
+    String? wosId,
   }) {
     return ResearchIDs(
-      vidwanId: vidwanId ?? this.vidwanId,
-      scopusId: scopusId ?? this.scopusId,
-      orcidId: orcidId ?? this.orcidId,
       googleScholarId: googleScholarId ?? this.googleScholarId,
+      orcidId: orcidId ?? this.orcidId,
+      scopusId: scopusId ?? this.scopusId,
+      vidwanId: vidwanId ?? this.vidwanId,
+      researcherId: researcherId ?? this.researcherId,
+      wosId: wosId ?? this.wosId,
     );
   }
 }
@@ -211,15 +222,13 @@ class CITExperience {
   factory CITExperience.fromDateOfJoining(String dateOfJoining) {
     try {
       final parts = dateOfJoining.split('/');
-      if (parts.length != 3) {
-        return CITExperience(years: 0, months: 0);
-      }
 
-      final day = int.parse(parts[0]);
-      final month = int.parse(parts[1]);
-      final year = int.parse(parts[2]);
+      final joiningDate = DateTime(
+        int.parse(parts[2]),
+        int.parse(parts[1]),
+        int.parse(parts[0]),
+      );
 
-      final joiningDate = DateTime(year, month, day);
       final now = DateTime.now();
 
       int totalMonths =
@@ -230,12 +239,9 @@ class CITExperience {
         totalMonths--;
       }
 
-      final years = totalMonths ~/ 12;
-      final months = totalMonths % 12;
-
       return CITExperience(
-        years: years,
-        months: months,
+        years: totalMonths ~/ 12,
+        months: totalMonths % 12,
       );
     } catch (e) {
       return CITExperience(years: 0, months: 0);
@@ -243,7 +249,8 @@ class CITExperience {
   }
 
   factory CITExperience.fromFirestore(DocumentSnapshot doc) {
-    Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+    final data = doc.data() as Map<String, dynamic>? ?? {};
+
     return CITExperience(
       years: data['years'] ?? 0,
       months: data['months'] ?? 0,

@@ -1,7 +1,9 @@
+
 import 'user_model.dart';
 import 'faculty_model.dart';
 
 class FacultyProfile {
+
   final UserModel userModel;
   final PersonalInfo personalInfo;
   final ResearchIDs? researchIDs;
@@ -18,51 +20,125 @@ class FacultyProfile {
     this.educationQualifications = const [],
   });
 
-  // ===============================
-  // Calculate CIT Experience
-  // ===============================
+  // =====================================
+  // 🔹 Convert Map → FacultyProfile
+  // =====================================
 
-  double get calculatedCITYears {
-    if (personalInfo.dateOfJoining.isNotEmpty) {
-      try {
-        final parts = personalInfo.dateOfJoining.split('-');
+  factory FacultyProfile.fromMap(Map<String, dynamic> data) {
 
-        if (parts.length == 3) {
-          final day = int.parse(parts[0]);
-          final month = int.parse(parts[1]);
-          final year = int.parse(parts[2]);
+    return FacultyProfile(
 
-          final joiningDate = DateTime(year, month, day);
-          final now = DateTime.now();
+      userModel: data['userModel'] as UserModel,
 
-          final differenceDays = now.difference(joiningDate).inDays;
+      personalInfo: data['personalInfo'] as PersonalInfo,
 
-          // Use 365.25 for leap year accuracy
-          return differenceDays / 365.25;
-        }
-      } catch (e) {
-        return citExperience?.years.toDouble() ?? 0.0;
-      }
-    }
+      researchIDs: data['researchIDs'] as ResearchIDs?,
 
-    return citExperience?.years.toDouble() ?? 0.0;
+      citExperience: data['citExperience'] as CITExperience?,
+
+      workExperiences:
+          (data['workExperiences'] as List<WorkExperience>? ?? []),
+
+      educationQualifications:
+          (data['educationQualifications']
+                  as List<EducationQualification>? ??
+              []),
+    );
   }
 
-  // ===============================
-  // Calculate Total Experience
-  // ===============================
+  // =====================================
+  // 🔹 Numeric CIT Experience (for sorting)
+  // =====================================
+
+  double get calculatedCITYears {
+
+    if (personalInfo.dateOfJoining.isEmpty) return 0;
+
+    try {
+
+      final parts = personalInfo.dateOfJoining.split('-');
+
+      if (parts.length != 3) return 0;
+
+      final day = int.parse(parts[0]);
+      final month = int.parse(parts[1]);
+      final year = int.parse(parts[2]);
+
+      final joiningDate = DateTime(year, month, day);
+      final today = DateTime.now();
+
+      final differenceDays =
+          today.difference(joiningDate).inDays;
+
+      return differenceDays / 365.25;
+
+    } catch (e) {
+      return 0;
+    }
+  }
+
+  // =====================================
+  // 🔹 Formatted CIT Experience (UI)
+  // =====================================
+
+  String get calculatedCITExperience {
+
+    if (personalInfo.dateOfJoining.isEmpty) {
+      return "0 Years 0 Months";
+    }
+
+    try {
+
+      final parts = personalInfo.dateOfJoining.split('-');
+
+      if (parts.length != 3) {
+        return "0 Years 0 Months";
+      }
+
+      final day = int.parse(parts[0]);
+      final month = int.parse(parts[1]);
+      final year = int.parse(parts[2]);
+
+      final joiningDate = DateTime(year, month, day);
+      final today = DateTime.now();
+
+      int years = today.year - joiningDate.year;
+      int months = today.month - joiningDate.month;
+
+      if (today.day < joiningDate.day) {
+        months--;
+      }
+
+      if (months < 0) {
+        years--;
+        months += 12;
+      }
+
+      if (years < 0) years = 0;
+      if (months < 0) months = 0;
+
+      return "$years Years $months Months";
+
+    } catch (e) {
+      return "0 Years";
+    }
+  }
+
+  // =====================================
+  // 🔹 Total Experience (Sorting)
+  // =====================================
 
   double get totalExperience {
+
     double total = 0;
 
-    // External Work Experience
     for (var exp in workExperiences) {
       total += exp.yearsOfExperience;
     }
 
-    // CIT Experience
     total += calculatedCITYears;
 
     return total;
   }
 }
+

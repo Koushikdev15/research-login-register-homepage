@@ -28,19 +28,24 @@ static Future<void> generateFacultyPDF(
     final fdbData =
         await _prepareFdbData(faculty);
 
-    pw.ImageProvider? profileImage;
+   pw.ImageProvider? profileImage;
 
-    if (faculty.userModel.profilePictureURL != null) {
-      try {
-        final response = await http.get(
-            Uri.parse(faculty.userModel.profilePictureURL!));
-        if (response.statusCode == 200) {
-          profileImage =
-              pw.MemoryImage(response.bodyBytes);
-        }
-      } catch (_) {}
+if (faculty.userModel.profilePictureURL != null) {
+  try {
+
+    final imageUrl = _convertDriveUrl(
+        faculty.userModel.profilePictureURL!);
+
+    final response = await http.get(Uri.parse(imageUrl));
+
+    if (response.statusCode == 200) {
+      profileImage = pw.MemoryImage(response.bodyBytes);
     }
 
+  } catch (e) {
+    print("Profile image load failed: $e");
+  }
+}
     pdf.addPage(
       pw.MultiPage(
         pageFormat: PdfPageFormat.a4,
@@ -99,6 +104,7 @@ static Future<void> generateFacultyPDF(
       ),
     );
 
+
     await Printing.layoutPdf(
       name:
           '${faculty.personalInfo.name.replaceAll(' ', '_')}_Profile.pdf',
@@ -110,6 +116,13 @@ static Future<void> generateFacultyPDF(
     print(stack);
     rethrow;
   }
+}
+static String _convertDriveUrl(String url) {
+  if (url.contains("drive.google.com/file/d/")) {
+    final id = url.split("/d/")[1].split("/")[0];
+    return "https://drive.google.com/uc?export=view&id=$id";
+  }
+  return url;
 }
 
 
@@ -329,10 +342,10 @@ static Future<void> generateFacultyPDF(
     return pw.Table(
        border: pw.TableBorder.all(color: PdfColors.grey300),
       children: [
-        if (ids.vidwanId != null) _buildTableRow('Vidwan ID', ids.vidwanId!),
-        if (ids.scopusId != null) _buildTableRow('Scopus ID', ids.scopusId!),
-        if (ids.orcidId != null) _buildTableRow('ORCID ID', ids.orcidId!),
-        if (ids.googleScholarId != null) _buildTableRow('Google Scholar ID', ids.googleScholarId!),
+      _buildTableRow('Vidwan ID', ids.vidwanId.isNotEmpty ? ids.vidwanId : '-'),
+      _buildTableRow('Scopus ID', ids.scopusId.isNotEmpty ? ids.scopusId : '-'),
+      _buildTableRow('ORCID ID', ids.orcidId.isNotEmpty ? ids.orcidId : '-'),
+      _buildTableRow('Google Scholar ID', ids.googleScholarId.isNotEmpty ? ids.googleScholarId : '-'),
       ],
     );
   }
@@ -517,7 +530,7 @@ static List<String> _buildRowData({
     work.source ?? '-',
     year,
     identifier,
-    isVerified ? 'VERIFIED' : 'PENDING',
+    isVerified ? 'Verified' : 'Pending',
   ];
 }
 
@@ -576,7 +589,7 @@ widgets.addAll(
   _buildResearchTypeBlock(
     entry.key,
     entry.value,
-    true,
+    false,
   ),
 );
 
@@ -609,41 +622,57 @@ return widgets;
     FacultyProfile faculty) async {
 
   final researchIDs = faculty.researchIDs;
-  if (researchIDs?.orcidId == null ||
-      researchIDs!.orcidId!.isEmpty) {
-    return {
-      'verified': <String, List<WorkItem>>{},
-      'nonVerified': <String, List<WorkItem>>{},
-    };
-  }
+final orcid = researchIDs?.orcidId;
 
-  // 🔹 1. Fetch ORCID Works
-  final groupedWorks =
-      await OrcidService.fetchGroupedWorks(
-          researchIDs.orcidId!);
+if (orcid == null || orcid.isEmpty) {
+  return {
+    'verified': <String, List<WorkItem>>{},
+    'nonVerified': <String, List<WorkItem>>{},
+  };
+}
 
-  final List<WorkItem> allWorks = [];
+// 🔹 Fetch ORCID Works
+final groupedWorks =
+    await OrcidService.fetchGroupedWorks(orcid);
 
-  groupedWorks.forEach((type, works) {
-    allWorks.addAll(works);
-  });
+final List<WorkItem> allWorks = [];
+
+groupedWorks.forEach((type, works) {
+  allWorks.addAll(works);
+});
 
   // 🔹 2. Fetch Verification Tree (ALL YEARS)
-  final verificationSnapshot =
-      await FirebaseFirestore.instance
-          .collectionGroup('works')
-          .where('facultyId',
-              isEqualTo: faculty.userModel.uid)
-          .get();
+  final facultyId = faculty.userModel.uid;
 
-  final Map<String, Map<String, dynamic>>
-      verificationMap = {};
+final Map<String, Map<String, dynamic>> verificationMap = {};
 
-  for (var doc in verificationSnapshot.docs) {
-    final data = doc.data();
-    verificationMap[data['putCode']] = data;
+final yearsSnapshot = await FirebaseFirestore.instance
+    .collection('research_verifications_tree')
+    .doc(facultyId)
+    .collection('years')
+    .get();
+
+for (var yearDoc in yearsSnapshot.docs) {
+
+  final workTypesSnapshot = await yearDoc.reference
+      .collection('workTypes')
+      .get();
+
+  for (var typeDoc in workTypesSnapshot.docs) {
+
+    final worksSnapshot = await typeDoc.reference
+        .collection('works')
+        .get();
+
+    for (var doc in worksSnapshot.docs) {
+      final data = doc.data();
+      if (data['putCode'] != null) {
+        verificationMap[data['putCode']] = data;
+      }
+    }
+
   }
-
+}
   // 🔹 3. Attach verification
   final Map<String, List<WorkItem>> verified =
       {};
@@ -749,9 +778,7 @@ static List<String> _getHeaders(
     _identifierColumnName(type),
   ];
 
-  base.add(isVerifiedSection
-      ? 'Indexed As'
-      : 'Status');
+  base.add('Status');
 
   return base;
 }

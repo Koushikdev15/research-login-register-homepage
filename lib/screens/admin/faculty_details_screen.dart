@@ -4,10 +4,12 @@ import '../../providers/admin_provider.dart';
 import '../../models/faculty_profile.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_text_styles.dart';
-import 'admin_general_info_screen.dart';
 import 'admin_research_screen.dart';
 import '../../services/pdf_service.dart';
-import '../faculty/fdb_view_page.dart';
+import '../faculty/fdb_selection_page.dart';
+import 'admin_scopus_screen.dart';
+import '../faculty/home_page.dart';
+
 
 class FacultyDetailsScreen extends StatefulWidget {
   const FacultyDetailsScreen({super.key});
@@ -18,16 +20,11 @@ class FacultyDetailsScreen extends StatefulWidget {
 
 class _FacultyDetailsScreenState extends State<FacultyDetailsScreen> {
   final TextEditingController _searchController = TextEditingController();
-
-  
-
   @override
   void dispose() {
     _searchController.dispose();
     super.dispose();
-  }
-
-  
+  }  
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -267,13 +264,14 @@ class _FacultyCard extends StatelessWidget {
       children: [
         ElevatedButton(
           onPressed: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) =>
-                    AdminGeneralInfoScreen(faculty: faculty),
-              ),
-            );
+           Navigator.push(
+  context,
+  MaterialPageRoute(
+   builder: (_) => HomePage(
+  facultyId: faculty.userModel.uid,
+   ),
+   ),
+);
           },
           style: ElevatedButton.styleFrom(
             backgroundColor: AppColors.universityNavy,
@@ -295,20 +293,36 @@ class _FacultyCard extends StatelessWidget {
             );
           },
           child: const Text('Research'),
+
         ),
+
+        OutlinedButton(
+  onPressed: () {
+    Navigator.push(
+  context,
+  MaterialPageRoute(
+    builder: (context) => AdminScopusScreen(
+      facultyId: faculty.userModel.uid,
+      facultyName: faculty.personalInfo.name,
+    ),
+  ),
+);
+  },
+  child: const Text('Scopus'),
+),
         const SizedBox(height: 8),
         OutlinedButton(
           onPressed: () {
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (context) => FdbViewPage(
-                  overrideEmail: faculty.userModel.email,
+                builder: (context) => FdbSelectionPage(
+                overrideEmail: faculty.userModel.email,
                 ),
               ),
             );
           },
-          child: const Text('FDB / Certifications'),
+          child: const Text('FDP / Certifications'),
         ),
         const SizedBox(height: 12),
         OutlinedButton.icon(

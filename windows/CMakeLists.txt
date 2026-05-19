@@ -10,6 +10,7 @@ set(BINARY_NAME "research_cse")
 # versions of CMake.
 cmake_policy(VERSION 3.14...3.25)
 
+
 # Define build configuration option.
 get_property(IS_MULTICONFIG GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
 if(IS_MULTICONFIG)

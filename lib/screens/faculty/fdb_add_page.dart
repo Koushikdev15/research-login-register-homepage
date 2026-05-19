@@ -11,13 +11,15 @@ class FdbAddPage extends StatefulWidget {
   final bool isEdit;
   final String? docId;
   final Map<String, dynamic>? existingData;
+  final String? overrideEmail;
 
   const FdbAddPage({
-    super.key,
-    this.isEdit = false,
-    this.docId,
-    this.existingData,
-  });
+  super.key,
+  this.isEdit = false,
+  this.docId,
+  this.existingData,
+  this.overrideEmail,
+});
 
   @override
   State<FdbAddPage> createState() => _FdbAddPageState();
@@ -98,18 +100,30 @@ class _FdbAddPageState extends State<FdbAddPage> {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
 
-    _facultyEmail = user.email ?? "";
+    _facultyEmail = widget.overrideEmail ?? user.email ?? "";
 
-    final doc = await FirebaseFirestore.instance
-        .collection('users')
-        .doc(user.uid)
-        .collection('personalInfo')
-        .doc('info')
-        .get();
+   final query = await FirebaseFirestore.instance
+    .collection('users')
+    .where('email', isEqualTo: _facultyEmail)
+    .limit(1)
+    .get();
 
-    if (doc.exists) {
-      _facultyName = doc.data()?['name'] ?? "";
-    }
+if (query.docs.isNotEmpty) {
+  final uid = query.docs.first.id;
+
+  final doc = await FirebaseFirestore.instance
+      .collection('users')
+      .doc(uid)
+      .collection('personalInfo')
+      .doc('info')
+      .get();
+
+  if (doc.exists) {
+    _facultyName = doc.data()?['name'] ?? "";
+  }
+}
+
+    
 
     setState(() => _loadingProfile = false);
   }

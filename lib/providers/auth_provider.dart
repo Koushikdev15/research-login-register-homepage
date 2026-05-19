@@ -32,6 +32,10 @@ class AuthProvider with ChangeNotifier {
       notifyListeners();
     });
   }
+ void setUserFromAdminView(DocumentSnapshot doc) {
+  _userModel = UserModel.fromFirestore(doc);
+  notifyListeners();
+}
 
   // ================= LOAD USER DATA =================
 

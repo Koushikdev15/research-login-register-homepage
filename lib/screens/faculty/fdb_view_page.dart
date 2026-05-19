@@ -488,20 +488,11 @@ await Printing.layoutPdf(
                 children: [
 
                   /// TITLE ROW
-                 Row(
+                 /// TOP RIGHT BADGES
+Row(
   children: [
 
-    /// TITLE
-    Expanded(
-      child: Text(
-        data['title'] ?? '',
-        style: const TextStyle(
-          fontSize: 18,
-          fontWeight: FontWeight.bold,
-          color: Color(0xFF2D3142),
-        ),
-      ),
-    ),
+    const Spacer(),
 
     /// TYPE BADGE
     Container(
@@ -553,77 +544,87 @@ await Printing.layoutPdf(
       ),
     ),
 
-    /// 🔥 3 DOT MENU (Now outside nested Row)
+    /// 3 DOT MENU
     IconButton(
-  icon: const Icon(Icons.more_vert),
-  onPressed: () async {
-    final selected = await showMenu<String>(
-      context: context,
-      position: const RelativeRect.fromLTRB(1000, 200, 0, 0),
-      items: const [
-        PopupMenuItem(
-          value: 'edit',
-          child: Text('Edit'),
-        ),
-        PopupMenuItem(
-          value: 'delete',
-          child: Text('Delete'),
-        ),
-      ],
-    );
-
-    final docId = data['docId'];
-
-    if (selected == 'edit') {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => FdbAddPage(
-            isEdit: true,
-            docId: docId,
-            existingData: data,
-          ),
-        ),
-      );
-    }
-
-    if (selected == 'delete') {
-      final confirm = await showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text("Delete Record"),
-          content: const Text(
-              "Are you sure you want to delete this record?"),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text("Cancel"),
+      icon: const Icon(Icons.more_vert),
+      onPressed: () async {
+        final selected = await showMenu<String>(
+          context: context,
+          position: const RelativeRect.fromLTRB(1000, 200, 0, 0),
+          items: const [
+            PopupMenuItem(
+              value: 'edit',
+              child: Text('Edit'),
             ),
-            TextButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: const Text(
-                "Delete",
-                style: TextStyle(color: Colors.red),
-              ),
+            PopupMenuItem(
+              value: 'delete',
+              child: Text('Delete'),
             ),
           ],
-        ),
-      );
+        );
 
-      if (confirm == true) {
-        await FirebaseFirestore.instance
-            .collection('fdb_datum')
-            .doc(docId)
-            .delete();
-      }
-    }
-  },
-),
+        final docId = data['docId'];
+
+        if (selected == 'edit') {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => FdbAddPage(
+                isEdit: true,
+                docId: docId,
+                existingData: data,
+              ),
+            ),
+          );
+        }
+
+        if (selected == 'delete') {
+          final confirm = await showDialog(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: const Text("Delete Record"),
+              content: const Text(
+                  "Are you sure you want to delete this record?"),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context, false),
+                  child: const Text("Cancel"),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.pop(context, true),
+                  child: const Text(
+                    "Delete",
+                    style: TextStyle(color: Colors.red),
+                  ),
+                ),
+              ],
+            ),
+          );
+
+          if (confirm == true) {
+            await FirebaseFirestore.instance
+                .collection('fdb_datum')
+                .doc(docId)
+                .delete();
+          }
+        }
+      },
+    ),
   ],
 ),
 
+const Divider(),
 
-                  const Divider(height: 24),
+/// TITLE
+Text(
+  data['title'] ?? '',
+  style: const TextStyle(
+    fontSize: 18,
+    fontWeight: FontWeight.bold,
+    color: Color(0xFF2D3142),
+  ),
+),
+                 const Divider(height: 24),
 
                   _buildInfoRow(
                     Icons.business,
