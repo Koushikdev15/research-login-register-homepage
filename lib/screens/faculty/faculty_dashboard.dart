@@ -6,7 +6,7 @@ import '../../theme/app_text_styles.dart';
 
 import '../../providers/auth_provider.dart';
 import '../../providers/faculty_provider.dart';
-
+import '../login_selection_screen.dart';
 import '../../services/pdf_service.dart';
 import '../../services/faculty_service.dart';
 
@@ -85,6 +85,9 @@ class _FacultyDashboardState extends State<FacultyDashboard> {
   @override
   Widget build(BuildContext context) {
 
+    final authProvider =
+    Provider.of<AuthProvider>(context,listen: false,);
+
     final facultyProvider =
         Provider.of<FacultyProvider>(context, listen: false);
 
@@ -93,52 +96,129 @@ class _FacultyDashboardState extends State<FacultyDashboard> {
       /// =========================
       /// APP BAR
       /// =========================
-      appBar: AppBar(
-        elevation: 3,
-        backgroundColor: AppColors.academicBlue,
+     appBar: AppBar(
 
-        title: Row(
-          children: const [
-            Icon(Icons.school, color: Colors.white),
-            SizedBox(width: 8),
-            Text("Research CSE"),
-          ],
+  elevation: 3,
+  backgroundColor: AppColors.academicBlue,
+
+  title: Row(
+    children: [
+
+      const Icon(
+        Icons.school,
+        color: Colors.white,
+      ),
+
+      const SizedBox(width: 8),
+
+      Expanded(
+        child: Text(
+          "Research CSE",
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(color: Colors.white,fontSize: 20,fontWeight: FontWeight.bold,),
+        ),
+      ),
+    ],
+  ),
+
+  actions: [
+
+    /// EDIT PROFILE
+    IconButton(
+      icon: const Icon(
+        Icons.edit_outlined,
+        color: Colors.white,
+      ),
+      tooltip: "Edit Profile",
+      onPressed: () {
+
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) =>
+                FacultyRegistrationScreen(
+              personalInfo:
+                  facultyProvider.personalInfo!,
+              researchIDs:
+                  facultyProvider.researchIDs!,
+              workExperiences:
+                  facultyProvider.workExperiences,
+              educationQualifications:
+                  facultyProvider
+                      .educationQualifications,
+            ),
+          ),
+        );
+      },
+    ),
+
+    /// PRINT PDF
+    IconButton(
+      icon: const Icon(
+        Icons.picture_as_pdf_outlined,
+        color: Colors.white,
+      ),
+      tooltip: "Download Profile PDF",
+      onPressed:
+          _isGeneratingPDF ? null : _generatePDF,
+    ),
+
+    /// 3 DOT MENU
+    PopupMenuButton<String>(
+
+      icon: const Icon(
+        Icons.more_vert,
+        color: Colors.white,
+      ),
+
+      onSelected: (value) async {
+
+        /// LOGOUT
+        if (value == 'logout') {
+
+          await authProvider.signOut();
+
+          if (!context.mounted) return;
+
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(
+              builder: (_) =>
+                  const LoginSelectionScreen(),
+            ),
+            (route) => false,
+          );
+        }
+
+        /// DELETE ACCOUNT
+        if (value == 'delete') {
+
+          showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder: (_) =>
+                const DeleteAccountDialog(),
+          );
+        }
+      },
+
+      itemBuilder: (context) => [
+
+        const PopupMenuItem(
+          value: 'logout',
+          child: Text('Logout'),
         ),
 
-        actions: [
+        const PopupMenuItem(
+          value: 'delete',
+          child: Text('Delete Account'),
+        ),
+      ],
+    ),
 
-          /// EDIT PROFILE
-          IconButton(
-            icon: const Icon(Icons.edit_outlined, color: Colors.white),
-            tooltip: "Edit Profile",
-            onPressed: () {
-
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => FacultyRegistrationScreen(
-                    personalInfo: facultyProvider.personalInfo!,
-                    researchIDs: facultyProvider.researchIDs!,
-                    workExperiences: facultyProvider.workExperiences,
-                    educationQualifications:
-                        facultyProvider.educationQualifications,
-                  ),
-                ),
-              );
-            },
-          ),
-
-          /// PRINT PROFILE PDF
-          IconButton(
-            icon: const Icon(Icons.picture_as_pdf_outlined,
-                color: Colors.white),
-            tooltip: "Download Profile PDF",
-            onPressed: _isGeneratingPDF ? null : _generatePDF,
-          ),
-
-          const SizedBox(width: 12),
-        ],
-      ),
+    const SizedBox(width: 8),
+  ],
+ ),
 
       /// =========================
       /// BODY
@@ -353,6 +433,101 @@ class _FacultyDashboardState extends State<FacultyDashboard> {
                   ),
                 )
               : null,
+    );
+  }
+}
+class DeleteAccountDialog
+    extends StatefulWidget {
+
+  const DeleteAccountDialog({super.key});
+
+  @override
+  State<DeleteAccountDialog> createState() =>
+      _DeleteAccountDialogState();
+}
+
+class _DeleteAccountDialogState
+    extends State<DeleteAccountDialog> {
+
+  int seconds = 3;
+
+  @override
+  void initState() {
+    super.initState();
+
+    _startTimer();
+  }
+
+  void _startTimer() {
+
+    Future.doWhile(() async {
+
+      await Future.delayed(
+        const Duration(seconds: 1),
+      );
+
+      if (!mounted) return false;
+
+      if (seconds == 0) {
+        return false;
+      }
+
+      setState(() {
+        seconds--;
+      });
+
+      return seconds > 0;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+
+    return AlertDialog(
+
+      title: const Text(
+        "Delete Account",
+      ),
+
+      content: const Text(
+        "Are you sure you want to delete your account?",
+      ),
+
+      actions: [
+
+        TextButton(
+          onPressed: () {
+            Navigator.pop(context);
+          },
+          child: const Text("Cancel"),
+        ),
+
+        ElevatedButton(
+
+          onPressed: seconds == 0
+              ? () {
+
+                  Navigator.pop(context);
+
+                  ScaffoldMessenger.of(context)
+                      .showSnackBar(
+
+                    const SnackBar(
+                      content: Text(
+                        "Delete feature coming soon",
+                      ),
+                    ),
+                  );
+                }
+              : null,
+
+          child: Text(
+            seconds == 0
+                ? "Confirm Delete"
+                : "Wait $seconds sec",
+          ),
+        ),
+      ],
     );
   }
 }

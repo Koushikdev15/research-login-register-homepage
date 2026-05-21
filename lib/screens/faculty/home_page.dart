@@ -14,7 +14,7 @@ import '../../widgets/education_card.dart';
 import '../../widgets/profile_picture_widget.dart';
 import '../../widgets/work_experience_card.dart';
 import '../../widgets/scopus_home_summary.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+
 
 
 class HomePage extends StatefulWidget {
@@ -320,7 +320,6 @@ if (targetFacultyId != null) {
 
     final authProvider = Provider.of<AuthProvider>(context);
     final facultyProvider = Provider.of<FacultyProvider>(context);
-    final user = authProvider.userModel;
 
     if (facultyProvider.isLoading) {
       return const Scaffold(
@@ -331,22 +330,18 @@ if (targetFacultyId != null) {
     }
 
     if (facultyProvider.personalInfo == null) {
-      return Scaffold(
-        body: Center(
-          child: ElevatedButton(
-           onPressed: () {
 
   facultyProvider.loadFacultyProfile(
     widget.facultyId ??
         authProvider.currentUserId!,
   );
 
-},
-            child: const Text("Retry Loading Profile"),
-          ),
-        ),
-      );
-    }
+  return const Scaffold(
+    body: Center(
+      child: CircularProgressIndicator(),
+    ),
+  );
+}
 
     final personalInfo = facultyProvider.personalInfo!;
 
