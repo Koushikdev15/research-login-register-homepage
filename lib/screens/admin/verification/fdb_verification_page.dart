@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../../../services/email_service.dart';
 
 class FdbVerificationPage extends StatelessWidget {
   const FdbVerificationPage({super.key});
@@ -138,16 +139,84 @@ class FdbVerificationPage extends StatelessWidget {
                                 backgroundColor:
                                     Colors.green,
                               ),
-                              onPressed: () async {
-                                await FirebaseFirestore
-                                    .instance
-                                    .collection(
-                                        'fdb_datum')
-                                    .doc(doc.id)
-                                    .update({
-                                  'status': 'approved',
-                                });
-                              },
+                             onPressed: () async {
+
+  try {
+
+    // =====================================================
+    // UPDATE STATUS
+    // =====================================================
+
+    await FirebaseFirestore.instance
+        .collection('fdb_datum')
+        .doc(doc.id)
+        .update({
+
+      'status': 'approved',
+
+    });
+
+    // =====================================================
+    // SEND EMAIL
+    // =====================================================
+
+    await EmailService.sendFdpApprovalMail(
+
+      facultyName:
+          data['name'] ?? 'Unknown',
+
+      facultyEmail:
+          data['email'] ?? 'Unknown',
+
+      title:
+          data['title'] ?? 'Unknown',
+
+      organization:
+          data['organization'] ?? 'Unknown',
+
+      duration:
+          data['duration'] ?? 'Unknown',
+
+      type:
+          data['type'] ?? 'FDP',
+
+      imagePath:
+          data['photoUrl'] ?? '',
+    );
+
+    // =====================================================
+    // SUCCESS
+    // =====================================================
+
+    if (context.mounted) {
+
+      ScaffoldMessenger.of(context)
+          .showSnackBar(
+
+        const SnackBar(
+          content: Text(
+            "FDP Approved & Email Sent",
+          ),
+        ),
+      );
+    }
+
+  } catch (e) {
+
+    if (context.mounted) {
+
+      ScaffoldMessenger.of(context)
+          .showSnackBar(
+
+        SnackBar(
+          content: Text(
+            "Error: $e",
+          ),
+        ),
+      );
+    }
+  }
+},
                               icon: const Icon(Icons.check),
                               label:
                                   const Text("Approve"),

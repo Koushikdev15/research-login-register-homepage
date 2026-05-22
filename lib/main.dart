@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_auth/firebase_auth.dart'
-    as firebase_auth;
 import 'package:provider/provider.dart';
 
 import 'providers/auth_provider.dart';
@@ -10,7 +8,6 @@ import 'providers/faculty_provider.dart';
 import 'providers/admin_provider.dart';
 
 import 'screens/login_selection_screen.dart';
-import 'screens/faculty/faculty_dashboard.dart';
 
 import 'theme/app_theme.dart';
 import 'utils/constants.dart';
@@ -85,15 +82,10 @@ class MyApp extends StatelessWidget {
         theme: AppTheme.lightTheme,
 
         // =====================================================
-        // AUTO LOGIN
+        // APP START PAGE
         // =====================================================
 
-        home:
-            firebase_auth.FirebaseAuth
-                    .instance.currentUser !=
-                null
-            ? const FacultyDashboard()
-            : const LoginSelectionScreen(),
+        home: const LoginSelectionScreen(),
       ),
     );
   }

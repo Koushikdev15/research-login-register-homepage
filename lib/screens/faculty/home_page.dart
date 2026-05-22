@@ -330,12 +330,6 @@ if (targetFacultyId != null) {
     }
 
     if (facultyProvider.personalInfo == null) {
-
-  facultyProvider.loadFacultyProfile(
-    widget.facultyId ??
-        authProvider.currentUserId!,
-  );
-
   return const Scaffold(
     body: Center(
       child: CircularProgressIndicator(),
