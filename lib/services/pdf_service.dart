@@ -2,121 +2,79 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'package:flutter/services.dart' show rootBundle;
-import 'package:http/http.dart' as http;
 import '../models/faculty_profile.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../services/orcid_service.dart';
+import '../services/pdf_export_options.dart';
 
 
 class PDFService {
 
 static Future<void> generateFacultyPDF(
-    FacultyProfile faculty) async {
+    FacultyProfile faculty, {
+    PdfExportOptions options = const PdfExportOptions(),
+  }) async {
+    try {
+      final pdf = pw.Document();
 
-  try {
-    final pdf = pw.Document();
+      // 🔹 Load College Logo
+      final logoBytes = await rootBundle.load('assets/images/college_logo.png');
+      final logoImage = pw.MemoryImage(logoBytes.buffer.asUint8List());
 
-    // 🔹 Load College Logo
-    final logoBytes =
-        await rootBundle.load('assets/images/college_logo.png');
-    final logoImage =
-        pw.MemoryImage(logoBytes.buffer.asUint8List());
+      // ✅ Single call — with options
+      final researchData = await _prepareResearchData(faculty, options);
 
-    final researchData =
-        await _prepareResearchData(faculty);
+      final fdbData = await _prepareFdbData(faculty, options);
 
-    final fdbData =
-        await _prepareFdbData(faculty);
-
-   pw.ImageProvider? profileImage;
-
-if (faculty.userModel.profilePictureURL != null) {
-  try {
-
-    final imageUrl = _convertDriveUrl(
-        faculty.userModel.profilePictureURL!);
-
-    final response = await http.get(Uri.parse(imageUrl));
-
-    if (response.statusCode == 200) {
-      profileImage = pw.MemoryImage(response.bodyBytes);
-    }
-
-  } catch (e) {
-    print("Profile image load failed: $e");
-  }
-}
-    pdf.addPage(
-      pw.MultiPage(
-        pageFormat: PdfPageFormat.a4,
-        margin: const pw.EdgeInsets.all(32),
-        footer: (context) => pw.Container(
-          alignment: pw.Alignment.centerRight,
-          child: pw.Text(
-            'Page ${context.pageNumber} of ${context.pagesCount}',
-            style: const pw.TextStyle(
-              fontSize: 9,
-              color: PdfColors.grey,
+      pdf.addPage(
+        pw.MultiPage(
+          pageFormat: PdfPageFormat.a4,
+          margin: const pw.EdgeInsets.all(32),
+          footer: (context) => pw.Container(
+            alignment: pw.Alignment.centerRight,
+            child: pw.Text(
+              'Page ${context.pageNumber} of ${context.pagesCount}',
+              style: const pw.TextStyle(
+                fontSize: 9,
+                color: PdfColors.grey,
+              ),
             ),
           ),
+          build: (context) => [
+            _buildHeader(faculty, logoImage),
+            pw.SizedBox(height: 20),
+            _buildSectionHeader('Personal Information'),
+            _buildPersonalInfoTable(faculty),
+            pw.SizedBox(height: 20),
+            _buildSectionHeader('Research IDs'),
+            _buildResearchIDsTable(faculty),
+            pw.SizedBox(height: 20),
+            _buildSectionHeader('Work Experience'),
+            _buildWorkExperienceList(faculty),
+            _buildCITExperience(faculty),
+            pw.SizedBox(height: 20),
+            _buildSectionHeader('Educational Qualification'),
+            _buildEducationTable(faculty),
+            pw.SizedBox(height: 20),
+            _buildSectionHeader('Research Publications'),
+            ..._buildResearchSection(researchData),
+            pw.SizedBox(height: 20),
+            _buildSectionHeader('FDP & Certifications'),
+            _buildFdbSection(fdbData),
+          ],
         ),
-        build: (context) => [
+      );
 
-          // 🔥 UPDATED HEADER
-          _buildHeader(
-            faculty,
-            profileImage,
-            logoImage,
-          ),
-
-          pw.SizedBox(height: 20),
-
-          _buildSectionHeader('Personal Information'),
-          _buildPersonalInfoTable(faculty),
-
-          pw.SizedBox(height: 20),
-
-          _buildSectionHeader('Research IDs'),
-          _buildResearchIDsTable(faculty),
-
-          pw.SizedBox(height: 20),
-
-          _buildSectionHeader('Work Experience'),
-          _buildWorkExperienceList(faculty),
-          _buildCITExperience(faculty),
-         
-
-          pw.SizedBox(height: 20),
-
-          _buildSectionHeader('Educational Qualification'),
-          _buildEducationTable(faculty),
-
-          pw.SizedBox(height: 20),
-
-          _buildSectionHeader('Research Publications'),
-          ..._buildResearchSection(researchData),
-
-          pw.SizedBox(height: 20),
-
-          _buildSectionHeader('FDP & Certifications'),
-          _buildFdbSection(fdbData),
-        ],
-      ),
-    );
-
-
-    await Printing.layoutPdf(
-      name:
-          '${faculty.personalInfo.name.replaceAll(' ', '_')}_Profile.pdf',
-      onLayout: (format) async => pdf.save(),
-    );
-
-  } catch (e, stack) {
-    print('PDF ERROR: $e');
-    print(stack);
-    rethrow;
+      await Printing.layoutPdf(
+        name: '${faculty.personalInfo.name.replaceAll(' ', '_')}_Profile.pdf',
+        onLayout: (format) async => pdf.save(),
+      );
+    } catch (e, stack) {
+      print('PDF ERROR: $e');
+      print(stack);
+      rethrow;
+    }
   }
-}
 static String _convertDriveUrl(String url) {
   if (url.contains("drive.google.com/file/d/")) {
     final id = url.split("/d/")[1].split("/")[0];
@@ -134,159 +92,69 @@ static String _convertDriveUrl(String url) {
     await generateFacultyPDF(faculty);
   }
 
-  static pw.Widget _buildHeader(
-  FacultyProfile faculty,
-  pw.ImageProvider? profileImage,
-  pw.ImageProvider logoImage,
-) {
-  return pw.Column(
-    crossAxisAlignment: pw.CrossAxisAlignment.start,
-    children: [
-
-      // ===============================
-      // 🏫 COLLEGE LETTERHEAD SECTION
-      // ===============================
-      pw.Row(
-        crossAxisAlignment: pw.CrossAxisAlignment.center,
-        children: [
-
-          // 🔹 College Logo
-          pw.Image(
+static pw.Widget _buildHeader(
+    FacultyProfile faculty,
+    pw.ImageProvider logoImage,
+  ) {
+    return pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: [
+        // ===============================
+        // 🏫 FULL-WIDTH LOGO BANNER
+        // ===============================
+        pw.Center(
+          child: pw.Image(
             logoImage,
-            width: 80,
-            height: 80,
+            height: 100,
+            fit: pw.BoxFit.contain,
           ),
+        ),
 
-          pw.SizedBox(width: 15),
+        pw.SizedBox(height: 12),
+        pw.Divider(thickness: 1.5),
+        pw.SizedBox(height: 16),
 
-          // 🔹 College Details
-          pw.Expanded(
-            child: pw.Column(
-              crossAxisAlignment: pw.CrossAxisAlignment.start,
-              children: [
-                pw.Text(
-                  "CHENNAI INSTITUTE OF TECHNOLOGY",
-                  style: pw.TextStyle(
-                    fontSize: 19,
-                    fontWeight: pw.FontWeight.bold,
-                    color: PdfColors.blue900,
-                  ),
-                ),
-                pw.Text(
-                  "(Autonomous)",
-                  style: pw.TextStyle(
-                    fontSize: 12,
-                    fontStyle: pw.FontStyle.italic,
-                  ),
-                ),
-                pw.SizedBox(height: 2),
-                pw.Text(
-                  "Department of Computer Science and Engineering",
-                  style: pw.TextStyle(
-                    fontSize: 13,
-                    fontWeight: pw.FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
+        // ===============================
+        // 👤 FACULTY DETAILS (no photo)
+        // ===============================
+        pw.Text(
+          faculty.personalInfo.name,
+          style: pw.TextStyle(
+            fontSize: 22,
+            fontWeight: pw.FontWeight.bold,
+            color: PdfColors.black,
           ),
-        ],
-      ),
+        ),
 
-      pw.SizedBox(height: 10),
-      pw.Divider(thickness: 1.5),
+        pw.SizedBox(height: 6),
 
-      pw.SizedBox(height: 20),
+        pw.Text(
+          faculty.personalInfo.designation,
+          style: pw.TextStyle(fontSize: 13),
+        ),
 
-      // ===============================
-      // 👤 FACULTY PROFILE SECTION
-      // ===============================
-      pw.Row(
-        crossAxisAlignment: pw.CrossAxisAlignment.start,
-        children: [
+        pw.Text(
+          faculty.personalInfo.department,
+          style: pw.TextStyle(fontSize: 13),
+        ),
 
-          // 🔹 Faculty Photo
-          pw.Container(
-            width: 110,
-            height: 130,
-            decoration: pw.BoxDecoration(
-              border: pw.Border.all(
-                color: PdfColors.grey600,
-                width: 1,
-              ),
-              image: profileImage != null
-                  ? pw.DecorationImage(
-                      image: profileImage,
-                      fit: pw.BoxFit.cover,
-                    )
-                  : null,
-            ),
-            child: profileImage == null
-                ? pw.Center(
-                    child: pw.Text(
-                      faculty.personalInfo.name.isNotEmpty
-                          ? faculty.personalInfo.name[0]
-                          : '',
-                      style: pw.TextStyle(
-                        fontSize: 40,
-                        fontWeight: pw.FontWeight.bold,
-                      ),
-                    ),
-                  )
-                : null,
-          ),
+        pw.SizedBox(height: 4),
 
-          pw.SizedBox(width: 25),
+        pw.Text(
+          "Email: ${faculty.personalInfo.mailId}",
+          style: pw.TextStyle(fontSize: 11),
+        ),
 
-          // 🔹 Faculty Details
-          pw.Expanded(
-            child: pw.Column(
-              crossAxisAlignment: pw.CrossAxisAlignment.start,
-              children: [
+        pw.Text(
+          "Contact: ${faculty.personalInfo.contactNo}",
+          style: pw.TextStyle(fontSize: 11),
+        ),
 
-                pw.Text(
-                  faculty.personalInfo.name,
-                  style: pw.TextStyle(
-                    fontSize: 22,
-                    fontWeight: pw.FontWeight.bold,
-                    color: PdfColors.black,
-                  ),
-                ),
-
-                pw.SizedBox(height: 8),
-
-                pw.Text(
-                  faculty.personalInfo.designation,
-                  style: pw.TextStyle(fontSize: 14),
-                ),
-
-                pw.Text(
-                  faculty.personalInfo.department,
-                  style: pw.TextStyle(fontSize: 14),
-                ),
-
-                pw.SizedBox(height: 6),
-
-                pw.Text(
-                  "Email: ${faculty.personalInfo.mailId}",
-                  style: pw.TextStyle(fontSize: 12),
-                ),
-
-                pw.Text(
-                  "Contact: ${faculty.personalInfo.contactNo}",
-                  style: pw.TextStyle(fontSize: 12),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-
-      pw.SizedBox(height: 20),
-      pw.Divider(thickness: 1.5),
-    ],
-  );
-}
+        pw.SizedBox(height: 16),
+        pw.Divider(thickness: 1.5),
+      ],
+    );
+  }
 
 
   static pw.Widget _buildSectionHeader(String title) {
@@ -618,111 +486,98 @@ return widgets;
 }
 
 
+// ─── 2. _prepareResearchData — REPLACE YEAR/TYPE FETCH LOOP ──
+
   static Future<Map<String, dynamic>> _prepareResearchData(
-    FacultyProfile faculty) async {
+    FacultyProfile faculty,
+    PdfExportOptions options, // ← new param
+  ) async {
+    final researchIDs = faculty.researchIDs;
+    final orcid = researchIDs?.orcidId;
 
-  final researchIDs = faculty.researchIDs;
-final orcid = researchIDs?.orcidId;
+    if (orcid == null || orcid.isEmpty) {
+      return {
+        'verified': <String, List<WorkItem>>{},
+        'nonVerified': <String, List<WorkItem>>{},
+      };
+    }
 
-if (orcid == null || orcid.isEmpty) {
-  return {
-    'verified': <String, List<WorkItem>>{},
-    'nonVerified': <String, List<WorkItem>>{},
-  };
-}
+    // Fetch ORCID works (unchanged)
+    final groupedWorks = await OrcidService.fetchGroupedWorks(orcid);
 
-// 🔹 Fetch ORCID Works
-final groupedWorks =
-    await OrcidService.fetchGroupedWorks(orcid);
+    final List<WorkItem> allWorks = [];
+    groupedWorks.forEach((type, works) {
+      // ── Work type filter applied here ──────────────
+      if (options.matchesWorkType(type)) {
+        allWorks.addAll(works);
+      }
+    });
 
-final List<WorkItem> allWorks = [];
+    // ── Fetch verification tree — year filtered ─────
+    final facultyId = faculty.userModel.uid;
+    final facultyRootRef = FirebaseFirestore.instance
+        .collection('research_verifications_tree')
+        .doc(facultyId);
 
-groupedWorks.forEach((type, works) {
-  allWorks.addAll(works);
-});
+    final Map<String, Map<String, dynamic>> verificationMap = {};
 
-  // 🔹 2. Fetch Verification Tree (ALL YEARS)
-  final facultyId = faculty.userModel.uid;
+    final yearsSnapshot = await facultyRootRef.collection('years').get();
 
-final Map<String, Map<String, dynamic>> verificationMap = {};
+    for (var yearDoc in yearsSnapshot.docs) {
+      // ── Year filter applied here ───────────────────
+      if (!options.matchesYear(yearDoc.id)) continue;
 
-final yearsSnapshot = await FirebaseFirestore.instance
-    .collection('research_verifications_tree')
-    .doc(facultyId)
-    .collection('years')
-    .get();
+      final workTypesSnapshot =
+          await yearDoc.reference.collection('workTypes').get();
 
-for (var yearDoc in yearsSnapshot.docs) {
+      for (var typeDoc in workTypesSnapshot.docs) {
+        // ── Work type filter on verification side ─────
+        if (!options.matchesWorkType(typeDoc.id)) continue;
 
-  final workTypesSnapshot = await yearDoc.reference
-      .collection('workTypes')
-      .get();
+        final worksSnapshot = await typeDoc.reference.collection('works').get();
 
-  for (var typeDoc in workTypesSnapshot.docs) {
-
-    final worksSnapshot = await typeDoc.reference
-        .collection('works')
-        .get();
-
-    for (var doc in worksSnapshot.docs) {
-      final data = doc.data();
-      if (data['putCode'] != null) {
-        verificationMap[data['putCode']] = data;
+        for (var doc in worksSnapshot.docs) {
+          final data = doc.data();
+          if (data['putCode'] != null) {
+            verificationMap[data['putCode']] = data;
+          }
+        }
       }
     }
 
-  }
-}
-  // 🔹 3. Attach verification
-  final Map<String, List<WorkItem>> verified =
-      {};
-  final Map<String, List<WorkItem>>
-      nonVerified = {};
+    // Attach verification + split (unchanged logic)
+    final Map<String, List<WorkItem>> verified = {};
+    final Map<String, List<WorkItem>> nonVerified = {};
 
-  for (var work in allWorks) {
-    final verification =
-        verificationMap[work.putCode];
+    for (var work in allWorks) {
+      final verification = verificationMap[work.putCode];
+      final status = verification?['verificationStatus'];
 
-    final status =
-        verification?['verificationStatus'];
-
-    if (status == 'VERIFIED') {
-      verified
-          .putIfAbsent(work.type, () => [])
-          .add(work);
-    } else {
-      nonVerified
-          .putIfAbsent(work.type, () => [])
-          .add(work);
+      if (status == 'VERIFIED') {
+        verified.putIfAbsent(work.type, () => []).add(work);
+      } else {
+        nonVerified.putIfAbsent(work.type, () => []).add(work);
+      }
     }
+
+    // Sort (unchanged)
+    int sortComparator(WorkItem a, WorkItem b) {
+      final ay = int.tryParse(a.year ?? '');
+      final by = int.tryParse(b.year ?? '');
+      if (ay == null && by == null) return 0;
+      if (ay == null) return 1;
+      if (by == null) return -1;
+      return by.compareTo(ay);
+    }
+
+    verified.forEach((_, list) => list.sort(sortComparator));
+    nonVerified.forEach((_, list) => list.sort(sortComparator));
+
+    return {
+      'verified': verified,
+      'nonVerified': nonVerified,
+    };
   }
-
-  // 🔹 4. Sort All Lists
-  int sortComparator(
-      WorkItem a, WorkItem b) {
-    final ay = int.tryParse(a.year ?? '');
-    final by = int.tryParse(b.year ?? '');
-
-    if (ay == null && by == null) return 0;
-    if (ay == null) return 1;
-    if (by == null) return -1;
-
-    return by.compareTo(ay);
-  }
-
-  verified.forEach((_, list) {
-    list.sort(sortComparator);
-  });
-
-  nonVerified.forEach((_, list) {
-    list.sort(sortComparator);
-  });
-
-  return {
-    'verified': verified,
-    'nonVerified': nonVerified,
-  };
-}
 
 
 static pw.Widget _buildResearchTable(
@@ -784,58 +639,45 @@ static List<String> _getHeaders(
 }
 
 
-static Future<
-    Map<int, Map<String,
-        List<Map<String, dynamic>>>>>
-    _prepareFdbData(
-        FacultyProfile faculty) async {
+// ─── 3. _prepareFdbData — REPLACE SIGNATURE + ADD YEAR FILTER ──
 
-  final snapshot =
-      await FirebaseFirestore.instance
-          .collection('fdb_datum')
-          .where('email',
-              isEqualTo:
-                  faculty.userModel.email)
-          .get();
+  static Future<Map<int, Map<String, List<Map<String, dynamic>>>>>
+      _prepareFdbData(
+    FacultyProfile faculty,
+    PdfExportOptions options, // ← new param
+  ) async {
+    final snapshot = await FirebaseFirestore.instance
+        .collection('fdb_datum')
+        .where('email', isEqualTo: faculty.userModel.email)
+        .get();
 
-  final Map<int,
-          Map<String,
-              List<Map<String, dynamic>>>>
-      groupedData = {};
+    final Map<int, Map<String, List<Map<String, dynamic>>>> groupedData = {};
 
-  for (var doc in snapshot.docs) {
-    final data = doc.data();
+    for (var doc in snapshot.docs) {
+      final data = doc.data();
 
-    final startDate =
-        (data['startDate'] as Timestamp?)
-            ?.toDate();
+      final startDate = (data['startDate'] as Timestamp?)?.toDate();
 
-    if (startDate == null) continue;
+      if (startDate == null) continue;
 
-    final year = startDate.year;
-    final type =
-        data['type'] ?? 'Unknown';
+      final year = startDate.year;
 
-    groupedData
-        .putIfAbsent(year, () => {});
-    groupedData[year]!
-        .putIfAbsent(type, () => []);
-    groupedData[year]![type]!
-        .add(data);
+      // ── Year filter applied here ───────────────────
+      if (!options.matchesYear(year.toString())) continue;
+
+      final type = data['type'] ?? 'Unknown';
+
+      groupedData.putIfAbsent(year, () => {});
+      groupedData[year]!.putIfAbsent(type, () => []);
+      groupedData[year]![type]!.add(data);
+    }
+
+    // Sort years descending (unchanged)
+    final sortedYears = groupedData.keys.toList()
+      ..sort((a, b) => b.compareTo(a));
+
+    return {for (var year in sortedYears) year: groupedData[year]!};
   }
-
-  // 🔹 Sort Years Descending
-  final sortedYears =
-      groupedData.keys.toList()
-        ..sort((a, b) => b.compareTo(a));
-
-  final sortedMap = {
-    for (var year in sortedYears)
-      year: groupedData[year]!
-  };
-
-  return sortedMap;
-}
 
 
 static pw.Widget _buildFdbSection(
@@ -907,6 +749,4 @@ static pw.Widget _buildFdbSection(
     data: tableData,
   );
 }
-
-
 }

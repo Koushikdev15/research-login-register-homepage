@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-
+import '../../services/pdf_export_options.dart';
+import '../../services/pdf_filter_dialog.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_text_styles.dart';
 
@@ -41,39 +42,48 @@ class _FacultyDashboardState extends State<FacultyDashboard> {
   /// ===============================
   /// GENERATE FACULTY PDF
   /// ===============================
-  Future<void> _generatePDF() async {
 
-    final authProvider =
-        Provider.of<AuthProvider>(context, listen: false);
+  Future<void> _generatePDF() async {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+
+    // 1️⃣ Show filter dialog FIRST
+    final options = await showDialog<PdfExportOptions>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => PdfFilterDialog(
+        facultyId: authProvider.currentUserId!,
+      ),
+    );
+
+    // User cancelled
+    if (options == null) return;
 
     try {
-
       setState(() {
         _isGeneratingPDF = true;
       });
 
       final facultyService = FacultyService();
 
-      final profileData =
-          await facultyService.getCompleteFacultyProfile(
+      final profileData = await facultyService.getCompleteFacultyProfile(
         authProvider.currentUserId!,
       );
 
-      final facultyProfile =
-          FacultyProfile.fromMap(profileData);
+      final facultyProfile = FacultyProfile.fromMap(profileData);
 
-      await PDFService.generateFacultyPDF(facultyProfile);
-
+      await PDFService.generateFacultyPDF(
+        facultyProfile,
+        options: options, // ← pass filters
+      );
     } catch (e) {
+      if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text("PDF generation failed: $e"),
         ),
       );
-
     } finally {
-
       if (mounted) {
         setState(() {
           _isGeneratingPDF = false;
@@ -353,10 +363,10 @@ class _FacultyDashboardState extends State<FacultyDashboard> {
                         AppColors.academicBlue.withOpacity(0.25),
 
                     labelTextStyle:
-                        MaterialStateProperty.resolveWith<TextStyle>(
+                        WidgetStateProperty.resolveWith<TextStyle>(
                       (states) {
 
-                        if (states.contains(MaterialState.selected)) {
+                        if (states.contains(WidgetState.selected)) {
 
                           return const TextStyle(
                             color: AppColors.academicBlue,
@@ -371,11 +381,11 @@ class _FacultyDashboardState extends State<FacultyDashboard> {
                     ),
 
                     iconTheme:
-                        MaterialStateProperty.resolveWith<
+                        WidgetStateProperty.resolveWith<
                             IconThemeData>(
                       (states) {
 
-                        if (states.contains(MaterialState.selected)) {
+                        if (states.contains(WidgetState.selected)) {
 
                           return const IconThemeData(
                             color: AppColors.academicBlue,
