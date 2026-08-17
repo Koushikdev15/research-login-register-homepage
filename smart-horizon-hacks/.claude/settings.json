@@ -3,7 +3,18 @@
     "allow": [
       "Bash(claude mcp *)",
       "Bash(npx skills *)",
-      "Bash(curl -s -X POST https://bkzywsxfiqiaemwjbxhc.supabase.co/auth/v1/otp -H 'Content-Type: application/json' -H 'apikey: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJrenl3c3hmaXFpYWVtd2pieGhjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU5NDcyNjgsImV4cCI6MjEwMTUyMzI2OH0.mBJesz60xcbKE-DAa5IS1PrNCrqmcle3xb0Kb5b4gYE' -d '{\"email\":\"mohanachandran2007@gmail.com\",\"create_user\":true}' -w '\\\\nHTTP_STATUS:%{http_code}\\\\n')"
+      "Bash(curl -s -X POST https://bkzywsxfiqiaemwjbxhc.supabase.co/auth/v1/otp -H 'Content-Type: application/json' -H 'apikey: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJrenl3c3hmaXFpYWVtd2pieGhjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU5NDcyNjgsImV4cCI6MjEwMTUyMzI2OH0.mBJesz60xcbKE-DAa5IS1PrNCrqmcle3xb0Kb5b4gYE' -d '{\"email\":\"mohanachandran2007@gmail.com\",\"create_user\":true}' -w '\\\\nHTTP_STATUS:%{http_code}\\\\n')",
+      "Bash(tasklist)",
+      "PowerShell(Get-NetIPAddress -AddressFamily IPv4 | Where-Object { $_.InterfaceAlias -notmatch 'Loopback' -and $_.IPAddress -notmatch '^169\\\\.254\\\\.' } | Select-Object InterfaceAlias, IPAddress)",
+      "Bash(npx eslint *)",
+      "PowerShell(Get-NetTCPConnection -LocalPort 8081 -State Listen -ErrorAction SilentlyContinue)",
+      "Bash(netstat -ano)",
+      "Bash(taskkill //PID 15196 //F)",
+      "Bash(npx expo *)",
+      "Bash(tee /tmp/expo_tunnel.log)",
+      "Bash(npm install *)",
+      "PowerShell(Get-CimInstance Win32_Process -Filter \"Name='node.exe'\")",
+      "Bash(tee /tmp/expo_tunnel2.log)"
     ]
   }
 }
